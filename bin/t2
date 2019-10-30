@@ -1,0 +1,75 @@
+#!/bin/bash
+
+export APP=$HOME/app
+export SPARK_HOME=$APP/spark
+export HADOOP_HOME=$APP/hadoop
+export SPARK_DIST_CLASSPATH=$($HADOOP_HOME/bin/hadoop classpath)
+export CYPHER_VERSION=0.4.2
+
+#set -x
+
+spark () {
+    master () {
+        start () {
+            $SPARK_HOME/sbin/start-master.sh \
+                --webui-port 8887 \
+                --host 0.0.0.0 \
+                --port 7077
+        }
+        stop () {
+            $SPARK_HOME/sbin/stop-master.sh spark://localhost:7077 $*
+        }
+        status () {
+            ps -ef | grep spark | grep Master
+        }
+        $*
+    }    
+    worker () {
+        start () {
+            $SPARK_HOME/sbin/start-slave.sh \
+                spark://localhost:7077 \
+                --webui-port 8887 \
+                --host 0.0.0.0 \
+                --port 7077 $*
+        }
+        stop () {
+            $SPARK_HOME/sbin/stop-slave.sh $*            
+        }
+        status () {
+            ps -ef | grep spark | grep Worker
+        }
+        $*
+    }
+    hadoop () {
+        classpath () {
+            ls $($HADOOP_HOME/bin/hadoop classpath)
+        }
+        $*
+    }
+    shell () {
+        $SPARK_HOME/bin/spark-shell \
+            --master=spark://0.0.0.0:7077 \
+            --conf spark.neo4j.bolt.username=neo4j \
+            --conf spark.neo4j.bolt.password=ncatsgamma \
+            --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6
+    }
+    $*
+}
+
+robokop () {
+    import () {
+        kgx \
+            --debug neo4j-download \
+            -a https://robokopkg.renci.org \
+            --subject-label gene \
+            --stop-after 100 \
+            -u neo4j \
+            -p ncatsgamma \
+            -o target/robokg.csv
+        cd target
+        tar xf robokg.csv.tar
+    }
+    $*
+}
+
+$*
