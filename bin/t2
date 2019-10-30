@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# untar in ~/app and rename to spark and hadoop
+#   spark-2.4.4-bin-without-hadoop-scala-2.12.tgz
+#   hadoop-2.6.5.tar.gz
+
 export APP=$HOME/app
 export SPARK_HOME=$APP/spark
 export HADOOP_HOME=$APP/hadoop
@@ -9,6 +13,7 @@ export CYPHER_VERSION=0.4.2
 #set -x
 
 spark () {
+    # manage a spark master
     master () {
         start () {
             $SPARK_HOME/sbin/start-master.sh \
@@ -23,7 +28,8 @@ spark () {
             ps -ef | grep spark | grep Master
         }
         $*
-    }    
+    }
+    # manage a spark worker
     worker () {
         start () {
             $SPARK_HOME/sbin/start-slave.sh \
@@ -40,12 +46,14 @@ spark () {
         }
         $*
     }
+    # get info about hadoop calsspath
     hadoop () {
         classpath () {
             ls $($HADOOP_HOME/bin/hadoop classpath)
         }
         $*
     }
+    # start a spark shell 
     shell () {
         $SPARK_HOME/bin/spark-shell \
             --master=spark://0.0.0.0:7077 \
@@ -57,6 +65,7 @@ spark () {
 }
 
 robokop () {
+    # import a component of the robokop graph via kgx
     import () {
         kgx \
             --debug neo4j-download \
