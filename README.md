@@ -16,15 +16,15 @@ import some robokop data via kgx
 ```
 t2 robokop import
 ```
-in shell 1:
+in a shell:
 ```
 t2 spark master start
 ```
-in shell 2
+in another shell
 ```
 t2 spark worker start
 ```
-in shell 3
+in another shell
 ```
 t2 spark shell
 ```
