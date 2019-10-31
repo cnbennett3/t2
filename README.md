@@ -6,6 +6,16 @@ untar in ~/app and rename to spark and hadoop
 
 [hadoop](https://archive.apache.org/dist/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz)
 
+create a python3.7+ virtual environment
+
+clone [kgx](https://github.com/NCATS-Tangerine/kgx) in the repo, overwriting exixting kgx
+
+then restore kgx/kgx/transformer.py with `git checkout kgx/kgx/transformer.py`
+
+import some robokop data via kgx
+```
+t2 robokop import
+```
 in shell 1:
 ```
 t2 spark master start
