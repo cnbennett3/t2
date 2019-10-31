@@ -32,3 +32,4 @@ then, at the scala prompt:
 ```
 :load load.scala
 ```
+
