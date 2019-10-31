@@ -1,34 +1,40 @@
 # t2
 
-untar in ~/app and rename to spark and hadoop
+## Install
+
+On osx, running JDK 1.8.0
+
+Untar in ~/app and rename to spark and hadoop
 
 [spark](https://www.apache.org/dyn/closer.lua/spark/spark-2.4.4/spark-2.4.4-bin-without-hadoop-scala-2.12.tgz)
 
 [hadoop](https://archive.apache.org/dist/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz)
 
-create a python3.7+ virtual environment
+Create a python3.7+ virtual environment
 
-clone [kgx](https://github.com/NCATS-Tangerine/kgx) in the repo, overwriting exixting kgx
+Clone [kgx](https://github.com/NCATS-Tangerine/kgx) inside this repo, overwriting exixting kgx directory.
 
-then restore kgx/kgx/transformer.py with `git checkout kgx/kgx/transformer.py`
+Then restore kgx/kgx/transformer.py with `git checkout kgx/kgx/transformer.py`
 
-import some robokop data via kgx
+## Running
+
+Import some robokop data via kgx
 ```
 t2 robokop import
 ```
-in a shell:
+In a shell:
 ```
 t2 spark master start
 ```
-in another shell
+In another shell
 ```
 t2 spark worker start
 ```
-in another shell
+In another shell
 ```
 t2 spark shell
 ```
-then, at the scala prompt:
+Then, at the scala prompt:
 ```
 :load load.scala
 ```
