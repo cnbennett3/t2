@@ -25,14 +25,11 @@ import java.util.concurrent.atomic.AtomicLong
 
 
 println ("    Defining case classes.")
-//case class Gene(id:Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
-//case class Gene(id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
-//case class Disease(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
-//case class Disease(id: String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
+case class Gene(id:Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
+case class Disease(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
 
-//@RelationshipType("CAUSES_CONDITION")
-//case class GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
-//case class GeneToDiseaseRelationship(id:Long, source:String, target:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
+@RelationshipType("CAUSES_CONDITION")
+case class GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
 
 
 println ("    Defining AtomicLongGenerator class.")
@@ -64,38 +61,36 @@ object csvFileDataSource extends DataSource {
 
    def getData(source: String, subject: String, outfile: String): Unit = { println("Unimplemented.") }
 
-   def readData(source: String): DataFrame = {
-      spark.read.format("csv").option("header", "true").option("quote", "\"").option("escape", "\"").load(source)
+   def readData(inputFile: String): DataFrame = {
+      println(s"READING $inputFile FROM FILE.")
+      spark.read.format("csv").option("header", "true").option("quote", "\"").option("escape", "\"").load(inputFile)
+   }
+
+   def writeData(df: DataFrame, outputFile: String): Unit = {
+      println(s"WRITING $outputFile TO FILE.")
+      df.coalesce(1).write.format("csv").option("header", "true")
+                                        .option("quote", "\"")
+                                        .option("escape", "\"")
+                                        .save(outputFile)
    }
 
    def cleanData(df: DataFrame): DataFrame = {
       if (df.columns.toSeq.contains("subject")) {
          // Its an edge dataframe, so select/order edge columns
-// TEST: Idea for edges is to use id column as id so:
-//    1) use existing id column as id
-//    2) don't add unique_id_col
-//    3) can then automatically use edge subject and object as source and target columns: Just rename and change type to String
-//         val tmpDf_w_id = addUniqueIdCol(df)
-         val tmpDf_renamed = df.withColumnRenamed("subject","source_id")
-                                .withColumnRenamed("object", "target_id")
-//         val tmpDf_w_src = tmpDf_w_id.withColumn("source", lit(0L))
-//         val tmpDf_w_tgt = tmpDf_w_src.withColumn("target", lit(0L))
-//         val tmpDf_ord = tmpDf_renamed.select("rel_id", "source_id", "target_id", "subject", "object", "relation", "predicate_id", "relation_label")
-         tmpDf_renamed.select("id", "source_id", "target_id", "relation", "predicate_id", "relation_label")
-//         val tmpDf_relsrc = tmpDf_ord.withColumn("source", when(col("subject").equalTo("HGNC:12442"), 8).otherwise(col("source")))
-//         tmpDf_relsrc.withColumn("target", when(col("object").equalTo("MONDO:0002022"), 23).otherwise(col("target")))
+         val tmpDf_w_id = addUniqueIdCol(df)
+         //val tmpDf_renamed = tmpDf_w_id.withColumnRenamed("subject","source")
+         //                              .withColumnRenamed("object", "target")
+         val tmpDf_w_src = tmpDf_w_id.withColumn("source", lit(0L))
+         val tmpDf_w_tgt = tmpDf_w_src.withColumn("target", lit(0L))
+         val tmpDf_ord = tmpDf_w_tgt.select("id", "source", "target", "subject", "object", "relation", "predicate_id", "relation_label")
+         val tmpDf_relsrc = tmpDf_ord.withColumn("source", when(col("subject").equalTo("HGNC:12442"), 0).otherwise(col("source")))
+         tmpDf_relsrc.withColumn("target", when(col("object").equalTo("MONDO:0002022"), 1).otherwise(col("target")))
       }
       else {
          // Its a node dataframe . . .
-
-// TEST: Idea for nodes is to use id column as id so:
-//   1) don't rename id column to curie_or_id
-//   2) don't add unique_id_col
-//   3) don't select those two columns
-//         val tmpDf = df.withColumnRenamed("id","curie_or_id")
-//         var tmpDf_w_id = addUniqueIdCol(tmpDf)
-//         tmpDf_w_id.select("id", "curie_or_id", "category", "name", "equivalent_identifiers")
-         df.select("id", "category", "name", "equivalent_identifiers")
+         val tmpDf = df.withColumnRenamed("id","curie_or_id")
+         var tmpDf_w_id = addUniqueIdCol(tmpDf)
+         tmpDf_w_id.select("id", "curie_or_id", "category", "name", "equivalent_identifiers")
       }
    }
 
@@ -117,7 +112,7 @@ object csvFileDataSource extends DataSource {
 // Edge Data:
 //------------------------------------------------------------------------------
 println("   Reading edge data from file and creating dataframe . . .")
-val edgesDfFromFile = csvFileDataSource.readData("target/edges.csv")
+val edgesDfFromFile = csvFileDataSource.readData("target/edges_max.csv")
 edgesDfFromFile.show(125)
 
 println("   Cleaning Edge data  . . . " )
@@ -128,7 +123,8 @@ edgesDf.show(10000, false)
 // Node Data:
 //------------------------------------------------------------------------------
 println("   Reading node data from file and creating dataframe . . .")
-val nodesDfFromFile = csvFileDataSource.readData("target/nodes.csv")
+val nodesDfFromFile = csvFileDataSource.readData("target/nodes_max.csv")
+//nodesDfFromFile.show(125)
 
 println("   Cleaning node data . . .")
 val nodesDf = csvFileDataSource.cleanData(nodesDfFromFile)
@@ -138,64 +134,79 @@ println ("show edge and node schemas.")
 edgesDf.schema.printTreeString
 nodesDf.schema.printTreeString
 
+// Test: Save nodesDf and edgesDf to disk to force the UDF's to run for unique_id.
+// Theory is that they're not really running and that's why unique_ids change
+// when filtering into gene and disease df's below.
+
+csvFileDataSource.writeData(nodesDf, "target/nodes_cleaned.csv")
+csvFileDataSource.writeData(edgesDf, "target/edges_cleaned.csv")
+
+val new_nodesDf = csvFileDataSource.readData("target/nodes_cleaned.csv/part*.csv")
+val new_edgesDf = csvFileDataSource.readData("target/edges_cleaned.csv/part*.csv")
+
+println("NEWLY READ IN nodesdf FROM FILE:")
+new_nodesDf.show(2000)
+
+println("NEWLY READ IN edgesdf FROM FILE:")
+new_edgesDf.show(10000)
+
 // Select gene part and create a gene-only dataframe
-val geneDf:DataFrame = nodesDf.filter($"category" === "named_thing|gene")
-geneDf.show(125, false)
+val geneDf:DataFrame = new_nodesDf.filter($"category".contains("named_thing|gene"))
+val geneDf2 = geneDf.withColumn("gene_node_type", lit("gene"))
+
+
+println("FILTERED geneDf AFTER READING BACK IN FROM FILE:")
+geneDf2.show(1000)
 
 // Select disease part and create a disease-only dataframe
-val diseaseDf:DataFrame = nodesDf.filter($"category" === "named_thing|disease")
-diseaseDf.show(125)
+val diseaseDf:DataFrame = new_nodesDf.filter($"category".contains("named_thing|disease"))
+val diseaseDf2 = diseaseDf.withColumn("disease_node_type", lit("disease"))
 
+
+println("FILTERED diseaseDf AFTER READING BACK IN FROM FILE:")
+diseaseDf2.show(1000)
 
 println ("Initialize Morpheus...")
 implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
+val geneTable = MorpheusNodeTable(Set("Gene"), geneDf2)
+val diseaseTable = MorpheusNodeTable(Set("Disease"), diseaseDf2)
 
-val geneTable = MorpheusNodeTable(Set("Gene"), geneDf)
-val diseaseTable = MorpheusNodeTable(Set("Disease"), diseaseDf)
+val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", new_edgesDf.toDF())
+//GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String)
+//788,408,  83,   HGNC:12442,MONDO:0002022,['RO:0003303'],RO:0002410,['causes condition']
 
-val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("relation", edgesDf.toDF())
+//val tmpDS = Seq(GeneToDiseaseRelationship(788,408,83,"HGNC:12442","MONDO:0002022","RO:0003303","RO:0002410","causes_condition")).toDS()
+//val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("CAUSES_CONDITION", tmpDS.toDF())
 
 val graph = morpheus.readFrom(geneTable, diseaseTable, geneToDiseaseRelationshipTable)
 
-// Execute query
-val finalResult = graph.cypher("MATCH (g:Gene {name: 'TYR'})--(d:Disease) RETURN d")
 
+// Execute queries
+//val finalResult = graph.cypher("MATCH (g:Gene {name: 'TYR'})-[r]-(d:Disease) RETURN d")
+
+println("\n\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id\n\n")
+var r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id")
+r.show
+
+println("\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
+r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g")
+r.show
+
+r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN d")
+r.show
+
+r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN r")
+r.show
+
+r = graph.cypher("MATCH (g:Gene {name: 'ENSG00000077498'})-[r {relation_label: 'pathogenic_for_condition'}]-(d:Disease) RETURN d")
+r.show
+
+println("Cleaning up temp files . . .")
+val r = Seq("/bin/sh", "-c", "rm -rf target/*_cleaned.csv").!!
 
 println("")
 println("")
 println("========================= DONE ============================")
 println("")
 println("")
-
-
-
-
-object GeneDiseaseData {
-
-   import spark.implicits._
-   val genesDF: DataFrame = spark.createDataset(Seq(Gene(1, "HGNC:12442", "named_thing|gene", "TYR", "['UniProtKB:L8B082']", "gene"))).toDF("id", "curie_or_id", "category", "name", "equivalent_identifiers", "gene_node_type")
-   val diseasesDF: DataFrame = spark.createDataset(Seq(Disease(2, "MONDO:0002022", "named_thing|disease", "disease_of_orbital_region", "['MEDDRA:10015903']", "disease"))).toDF("id", "curie_or_id", "category", "name", "equivalent_identifiers", "disease_node_type")
-   val causesDF: DataFrame = spark.createDataset(Seq(GeneToDiseaseRelationship(1, 1, 2, "HGNC:12442", "MONDO:0002022", "RO:0003303", "RO:0002410", "causes_condition"))).toDF("id", "source", "target", "subject", "obj", "relation", "predicate_id", "relation_label")
-
-   var geneTable = MorpheusNodeTable( Set("Gene"), genesDF)
-   var diseaseTable = MorpheusNodeTable( Set("Disease"), diseasesDF)
-   var causeTable = MorpheusRelationshipTable( "causes_condition", causesDF)
-
-   implicit val morpheus: MorpheusSession = MorpheusSession.local()
-   val graph = morpheus.readFrom(geneTable, diseaseTable, causeTable)
-}
-
-println("\n\nQuerying: MATCH (g:Gene {name:TYR})-[r]-(d:Disease) RETURN g.name, r.relation_label, d.name\n\n")
-val result1 = GeneDiseaseData.graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, r.relation_label, d.name")
-result1.show
-
-println("\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-val result2 = GeneDiseaseData.graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g")
-result2.show
-
-val result3 = GeneDiseaseData.graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN d")
-result3.show
-
-val result4 = GeneDiseaseData.graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN r")
-result4.show
