@@ -4,10 +4,7 @@ import org.opencypher.okapi.api.io.conversion.{ElementMapping, NodeMappingBuilde
 import org.opencypher.morpheus.api.io.{MorpheusNodeTable, MorpheusRelationshipTable, MorpheusElementTable}
 import scala.collection.mutable.ListBuffer
 import org.apache.spark.sql.{DataFrame, Row, Dataset, SparkSession}
-////
-//import org.apache.spark.rdd._
-//import org.apache.spark.sql.SparkSession
-//import collection.{breakOut, immutable._, Seq, List}
+
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.functions.udf
@@ -17,6 +14,19 @@ import scala.io.Source
 import scala.language.postfixOps
 import java.util.concurrent.atomic.AtomicLong
 
+// ----------------------------------------------------------------------------
+// TODO:
+// 1) Add method to index data in gene and disease (or whole) dataframes
+//      --> Probably best to do it whole file at a time if ids can be 
+//          guaranteed not to change.
+// 2) Add code to peel apart lists (+ any other data structs)--or modify data
+//    to remove them.
+// 3) Figure out what to do about strings with spaces in them (? poss issue
+//    for Morpheus)
+// 4) Figure out what to do with category list (currently separated by | chars)
+//    Ans: Leave this way for CSV (modify JSON list to be the same (?))
+//         For CSV, do partial string search using contains.
+// ----------------------------------------------------------------------------
 
 
 // Morpheus: https://github.com/opencypher/morpheus
@@ -78,11 +88,11 @@ object csvFileDataSource extends DataSource {
       if (df.columns.toSeq.contains("subject")) {
          // Its an edge dataframe, so select/order edge columns
          val tmpDf_w_id = addUniqueIdCol(df)
-         //val tmpDf_renamed = tmpDf_w_id.withColumnRenamed("subject","source")
-         //                              .withColumnRenamed("object", "target")
          val tmpDf_w_src = tmpDf_w_id.withColumn("source", lit(0L))
          val tmpDf_w_tgt = tmpDf_w_src.withColumn("target", lit(0L))
          val tmpDf_ord = tmpDf_w_tgt.select("id", "source", "target", "subject", "object", "relation", "predicate_id", "relation_label")
+
+         // TODO: This needs to be generalized and moved to an index_data method!!!
          val tmpDf_relsrc = tmpDf_ord.withColumn("source", when(col("subject").equalTo("HGNC:12442"), 0).otherwise(col("source")))
          tmpDf_relsrc.withColumn("target", when(col("object").equalTo("MONDO:0002022"), 1).otherwise(col("target")))
       }
@@ -124,7 +134,6 @@ edgesDf.show(10000, false)
 //------------------------------------------------------------------------------
 println("   Reading node data from file and creating dataframe . . .")
 val nodesDfFromFile = csvFileDataSource.readData("target/nodes_max.csv")
-//nodesDfFromFile.show(125)
 
 println("   Cleaning node data . . .")
 val nodesDf = csvFileDataSource.cleanData(nodesDfFromFile)
@@ -134,57 +143,55 @@ println ("show edge and node schemas.")
 edgesDf.schema.printTreeString
 nodesDf.schema.printTreeString
 
-// Test: Save nodesDf and edgesDf to disk to force the UDF's to run for unique_id.
-// Theory is that they're not really running and that's why unique_ids change
-// when filtering into gene and disease df's below.
+
+// This code is required to actually trigger the UDF's that were called earlier that 
+// were intended to create unique id's. Scala wants to lazily evaluate so they don't 
+// get called until after the dataframe is split, causing the global uniqueness to
+// get lost.  From my research, this is the only way to force UDF's to run, though
+// it's ridiculously costly in realtime: write to disk and read back in.
+// I'm going to write a defect for this and hopefully it will change.
+
+// methodify this:
 
 csvFileDataSource.writeData(nodesDf, "target/nodes_cleaned.csv")
-csvFileDataSource.writeData(edgesDf, "target/edges_cleaned.csv")
-
 val new_nodesDf = csvFileDataSource.readData("target/nodes_cleaned.csv/part*.csv")
-val new_edgesDf = csvFileDataSource.readData("target/edges_cleaned.csv/part*.csv")
-
-println("NEWLY READ IN nodesdf FROM FILE:")
+println("   NEWLY READ IN nodesdf FROM FILE:")
 new_nodesDf.show(2000)
 
-println("NEWLY READ IN edgesdf FROM FILE:")
+csvFileDataSource.writeData(edgesDf, "target/edges_cleaned.csv")
+val new_edgesDf = csvFileDataSource.readData("target/edges_cleaned.csv/part*.csv")
+println("   NEWLY READ IN edgesdf FROM FILE:")
 new_edgesDf.show(10000)
 
-// Select gene part and create a gene-only dataframe
+
+// Select rows of df that are gene-specific based on category to create a gene-only dataframe
+println("   Create gene-only dataframe . . . ")
 val geneDf:DataFrame = new_nodesDf.filter($"category".contains("named_thing|gene"))
 val geneDf2 = geneDf.withColumn("gene_node_type", lit("gene"))
-
-
-println("FILTERED geneDf AFTER READING BACK IN FROM FILE:")
+println("   FILTERED geneDf:")
 geneDf2.show(1000)
 
-// Select disease part and create a disease-only dataframe
+// Select rows of df that are disease-specific based on category to create a disease-only dataframe
+println("   Create disease-only dataframe . . . ")
 val diseaseDf:DataFrame = new_nodesDf.filter($"category".contains("named_thing|disease"))
 val diseaseDf2 = diseaseDf.withColumn("disease_node_type", lit("disease"))
-
-
-println("FILTERED diseaseDf AFTER READING BACK IN FROM FILE:")
+println("   FILTERED diseaseDf:")
 diseaseDf2.show(1000)
 
-println ("Initialize Morpheus...")
+println ("   Initialize Morpheus...")
 implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
+
+println("   Create Morpheus tables from dataframes . . .")
 val geneTable = MorpheusNodeTable(Set("Gene"), geneDf2)
 val diseaseTable = MorpheusNodeTable(Set("Disease"), diseaseDf2)
-
 val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", new_edgesDf.toDF())
-//GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String)
-//788,408,  83,   HGNC:12442,MONDO:0002022,['RO:0003303'],RO:0002410,['causes condition']
 
-//val tmpDS = Seq(GeneToDiseaseRelationship(788,408,83,"HGNC:12442","MONDO:0002022","RO:0003303","RO:0002410","causes_condition")).toDS()
-//val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("CAUSES_CONDITION", tmpDS.toDF())
-
+println("   Create graph from Morpheus tables . . . ")
 val graph = morpheus.readFrom(geneTable, diseaseTable, geneToDiseaseRelationshipTable)
 
 
 // Execute queries
-//val finalResult = graph.cypher("MATCH (g:Gene {name: 'TYR'})-[r]-(d:Disease) RETURN d")
-
 println("\n\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id\n\n")
 var r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id")
 r.show
@@ -193,12 +200,15 @@ println("\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
 r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g")
 r.show
 
+println("\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN d\n\n")
 r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN d")
 r.show
 
+println("\n\nQuerying: MATCH (g:Gene)-[r]-(d:Disease) RETURN r\n\n")
 r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN r")
 r.show
 
+println("\n\nQuerying: MATCH (g:Gene {name: 'ENSG00000077498'})-[r {relation_label: 'pathogenic_for_condition'}]-(d:Disease) RETURN d\n\n")
 r = graph.cypher("MATCH (g:Gene {name: 'ENSG00000077498'})-[r {relation_label: 'pathogenic_for_condition'}]-(d:Disease) RETURN d")
 r.show
 
