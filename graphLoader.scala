@@ -24,8 +24,10 @@ import java.io.{BufferedWriter, File, FileWriter}
 
 println ("Define node and edge case classes.")
 case class Edge(
-     id:String, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String, edge_type:String)
+     id:String, source:String, target:String, relation:String, predicate_id:String, relation_label:String, edge_type:String)
 
+// CHUCK: START HERE:
+// create a a case class for gene and a class for disease here . . .
 case class Node(id:String, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, node_type:String)
 
 
@@ -34,10 +36,18 @@ case class Node(id:String, curie_or_id:String, category:String, name:String, equ
 //-----------------------------------------------------------------
 println("Create edges df with desired columns from edges.csv.")
 val initialEdgesDF = spark.read.format("csv").option("header", "true").option("quote", "\"").option("escape", "\"").load("target/edges2.csv")
-val edgesDFMin = initialEdgesDF.select("id", "subject", "object", "relation", "predicate_id", "relation_label")
-val edgesDFTmp = edgesDFMin.withColumnRenamed("object","obj")
-val edgesDFProto = edgesDFTmp.withColumn("edge_type", lit("gene")) // Add edge_type
-val edgesDF = edgesDFMin.withColumn("edge_type", lit("gene")) // Add edge_type
+val edgesDFMin = initialEdgesDF.select("subject", "object", "relation", "predicate_id", "relation_label")
+
+// Add 64-bit integer for Morpheus
+var edgesDfUc = edgesDFMin.withColumn("id", row_number().over(Window.orderBy("subject")))
+val edgesColumns: Array[String] = edgesDfUc.columns
+
+val edgesDFTmp = edgesDfUc.withColumn("edge_type", lit("gene")) // Add edge_type
+val newEdgesColOrder = Array("id", "subject", "object", "relation", "predicate_id", "relation_label", "edge_type")
+val edgesDF_U = edgesDFTmp.select(newEdgesColOrder.head, newEdgesColOrder.tail: _*)
+
+// Rename object col for Scala
+val edgesDF = edgesDF_U.withColumnRenamed("subject", "source").withColumnRenamed("object",  "target")
 
 
 println("Create nodes df with desired columns from nodes.csv")
@@ -48,67 +58,27 @@ val nodesDFProto_U = nodesDFTmp2.withColumn("node_type", lit("gene")) // Add nod
 
 
 
-println("Add 64-bit unique (within nodes) identifier to unioned nodes dataframe")
-var nodesDfUc = nodesDFProto_U.withColumn("unique_id", row_number().over(Window.orderBy("node_type", "id")))
+println("Add 64-bit unique (within nodes) identifier to nodes dataframe")
+var nodesDfUc = nodesDFProto_U.withColumn("id", row_number().over(Window.orderBy("category")))
 val columns: Array[String] = nodesDfUc.columns
-val newColOrder = Array("id", "curie_or_id", "name", "equivalent_identifiers", "node_type")
+val newColOrder = Array("id", "category", "curie_or_id", "name", "equivalent_identifiers", "node_type")
 val nodesDF = nodesDfUc.select(newColOrder.head, newColOrder.tail: _*)
+
+
 nodesDF.show(30)
-
-
-
-
-//println("edgesDF:")
-//edgesDFProto.show(10)
-//println("nodesDFProto")
-//nodesDFProto.show(10)
-//-----------------------------------------------------------------
-
-
-//-----------------------------------------------------------------
-// Disease
-//-----------------------------------------------------------------
-//println("Create edges df with desired columns from edges.csv.")
-//val initialEdgesDiseaseDF = spark.read.format("csv").option("header", "true").option("quote", "\"").option("escape", "\"").load("target/edges_disease.csv")
-//val edgesDiseaseDFMin = initialEdgesDF.select("id", "subject", "object", "relation", "predicate_id", "relation_label")
-//val edgesDiseaseDFTmp = edgesDFMin.withColumnRenamed("object","obj")
-//val edgesDiseaseDFProto = edgesDiseaseDFTmp.withColumn("edge_type", lit("disease")) // Add edge_type
-
-//println("Create nodes df with desired columns from nodes.csv")
-//val initialNodesDiseaseDF = spark.read.format("csv").option("header", "true").option("quote", "\"").option("escape", "\"").load("target/nodes_disease.csv")
-//val nodesDiseaseDFTmp = initialNodesDF.select("id", "name", "equivalent_identifiers")
-//val nodesDiseaseDFProto = nodesDiseaseDFTmp.withColumn("node_type", lit("disease")) // Add node_type
-
-//println("edgesDiseaseDF:")
-//edgesDiseaseDFProto.show(10)
-//println("nodesDiseaseDFProto")
-//nodesDiseaseDFProto.show(10)
-//-----------------------------------------------------------------
-
-
-//println("Union gene and disease nodes")
-//val nodesDFU = nodesDFProto.union(nodesDiseaseDFProto)
-
-//println("Add 64-bit unique (within nodes) identifier to unioned nodes dataframe")
-//var nodesDfUc = nodesDFU.withColumn("unique_id", row_number().over(Window.orderBy("node_type", "id")))
-//val columns: Array[String] = nodesDfUc.columns
-//val newColOrder = Array("unique_id", "id", "name", "equivalent_identifiers", "node_type")
-//val nodesDF = nodesDfUc.select(newColOrder.head, newColOrder.tail: _*)
-//nodesDF.show(1230)
-
-//println("Union edges:")
-//val edgesDFUnsorted = edgesDFProto.union(edgesDiseaseDFProto) 
-//var edgesDFSorted = edgesDFUnsorted.orderBy($"relation", $"edge_type".desc)
-//edgesDFSorted.show(2000)
-
-//println("Filter edges dataframe for 'causes condition' relationship only")
-//val edgesDF = edgesDFSorted.filter(edgesDFSorted.col("relation_label").contains("causes condition"))
 edgesDF.show(125)
 
 
 println ("show edge and node schemas.")
 edgesDF.schema.printTreeString
 nodesDF.schema.printTreeString
+
+
+// Select gene part and create a gene-only dataframe
+val geneDF:DataFrame = nodesDF.filter($"category" === "named_thing|gene")
+
+// Select disease part and create a disease-only dataframe
+val diseaseDF:DataFrame = nodesDF.filter($"category" === "named_thing|disease")
 
 
 println ("Define graph loader")
@@ -189,6 +159,36 @@ println ("Initialize Morpheus...")
 implicit val morpheus: MorpheusSession = MorpheusSession.local()
 val spark = morpheus.sparkSession
 
+
+println("========================================================================================")
+println("                                Test")
+println("========================================================================================")
+
+
+val geneTable = MorpheusNodeTable(Set("X"), geneDF)
+val diseaseTable = MorpheusNodeTable(Set("Y"), diseaseDF)
+
+
+//val geneDiseaseTable = MorpheusNodeTable(Set("Node"), nodesDF.toDF())
+val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("RELATION", edgesDF.toDF())
+
+val graph = morpheus.readFrom(geneTable, diseaseTable, geneToDiseaseRelationshipTable)
+//val graph = morpheus.readFrom(geneDiseaseTable, geneToDiseaseRelationshipTable)
+
+// Execute query and cross fingers
+
+//val finalResult = graph.cypher("MATCH (g:Gene {name: 'TYR'})--(d:Disease) RETURN d")
+val finalResult = graph.cypher("MATCH (g)--(d) RETURN d")
+
+finalResult.records.show
+
+
+
+
+
+
+/*
+
 println("relationshipBuffer:")
 println(relationshipBuffer)
 
@@ -242,6 +242,6 @@ println ("\nQuery 3: 2 Node query: MATCH (g:Gene {name: 'TYR'})--(d:Disease {nam
 val geneToDiseaseResult2 = graph.cypher("MATCH (g:Gene {name: 'TYR'})--(d:Gene2 {name: 'disease of orbital region'}) RETURN d")
 val diseaseNames2: Set[String] = geneToDiseaseResult2.records.table.df.collect().map(_.getAs[String]("d_name")).toSet
 println(diseaseNames2)
-
+*/
 println ("Done.")
 
