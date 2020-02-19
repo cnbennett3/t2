@@ -80,11 +80,11 @@ object AtomicLongIdGen {
    }
 }
 
-println("   Registering UDF's . . .")
+println("    Registering UDF's . . .")
 spark.udf.register("nextNodeIdUDF", (v: Long) => v + AtomicLongIdGen.nextNodeId())
 spark.udf.register("nextEdgeIdUDF", (v: Long) => v + AtomicLongIdGen.nextEdgeId())
 
-println("Defining DataSource trait")
+println("    Defining DataSource trait")
 trait DataSource {
    def getData(source: String, subject: String, outfile: String): Unit
    def readData(source: String): DataFrame
@@ -96,7 +96,7 @@ trait DataSource {
 println("   Defining csvFileDataSource object")
 object csvFileDataSource extends DataSource {
 
-   def getData(source: String, subject: String, outfile: String): Unit = { println("Unimplemented.") }
+   def getData(source: String, subject: String, outfile: String): Unit = { println("    Unimplemented.") }
 
    def readData(inputFile: String): DataFrame = {
       println(s"   READING $inputFile FROM FILE AND CREATING DATAFRAME . . .")
@@ -104,7 +104,7 @@ object csvFileDataSource extends DataSource {
    }
 
    def writeData(df: DataFrame, outputFile: String): Unit = {
-      println(s"WRITING $outputFile TO FILE.")
+      println(s"    WRITING $outputFile TO FILE.")
       df.coalesce(1).write.format("csv").option("header", "true")
                                         .option("quote", "\"")
                                         .option("escape", "\"")
@@ -228,7 +228,7 @@ object csvExecutor {
 
       executeQueries(graph)
 
-      println("Cleaning up temp files . . .")
+      println("    Cleaning up temp files . . .")
       val r2 = Seq("/bin/sh", "-c", "rm -rf target/*_cleaned.csv").!!
 
       println("\n\n========================= DONE ============================\n\n")
@@ -241,15 +241,15 @@ object csvExecutor {
 println("   Defining jsonFileDataSource object")
 object jsonFileDataSource extends DataSource {
 
-   def getData(source: String, subject: String, outfile: String): Unit = { println("Unimplemented.") }
+   def getData(source: String, subject: String, outfile: String): Unit = { println("    Unimplemented.") }
 
    def readData(inputFile: String): DataFrame = {
-      println(s"READING $inputFile FROM FILE.")
+      println(s"    READING $inputFile FROM FILE.")
       spark.read.format("json").option("multiLine", "true").option("allowSingleQuotes", "true").option("allowUnquotedFieldNames", "true").load(inputFile)
    }
 
    def writeData(df: DataFrame, outputFile: String): Unit = {
-      println(s"WRITING $outputFile TO FILE.")
+      println(s"    WRITING $outputFile TO FILE.")
       df.coalesce(1).write.format("csv").option("header", "true")
                                         .option("quote", "\"")
                                         .option("escape", "\"")
@@ -398,6 +398,7 @@ object jsonExecutor {
 
       // Create map function using subjObjIdMap and use it on all columns to set source and target
       // Then create columns from result
+      // NOTE: Move to mapPartitions instead of map as data gets larger (and for better efficiency)
       println("    SETTING SOURCE AND TARGET INDICES . . .")
       def transformRow(row: Row): Row =  Row.fromSeq(row.toSeq ++ Array[Long](subjObjIdMap(row.getString(row.fieldIndex("subject"))), subjObjIdMap(row.getString(row.fieldIndex("object")))))
       def transformRows(iter: Iterator[Row]): Iterator[Row] = iter.map(transformRow)
