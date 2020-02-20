@@ -1,13 +1,11 @@
 import org.opencypher.morpheus.api.MorpheusSession
 import org.opencypher.morpheus.api.io.{Node, Relationship, RelationshipType}
-import org.opencypher.okapi.api.io.conversion.{ElementMapping, NodeMappingBuilder, RelationshipMappingBuilder}
 import org.opencypher.morpheus.api.io.{MorpheusNodeTable, MorpheusRelationshipTable, MorpheusElementTable}
 import org.opencypher.okapi.api.graph.{PropertyGraph}
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.Map
 import org.apache.spark.sql.{DataFrame, Row, Dataset, SparkSession}
 import org.apache.spark.sql.types.{LongType, StructType, StructField}
 
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.functions.udf
 import org.apache.spark.sql.functions.lit
@@ -20,7 +18,8 @@ println ("    Defining case classes.")
 case class Gene(id:Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
 case class Disease(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
 case class ChemicalSubstance(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, chem_subst_node_type: String) extends Node
-
+case class PhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, phenotypic_feature_node_type: String) extends Node
+case class DiseaseOrPhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_or_phenotypic_feature_node_type: String) extends Node
 
 @RelationshipType("CAUSES_CONDITION")
 case class GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
@@ -397,6 +396,19 @@ object jsonExecutor {
 
    }
 
+   def executeNewQueries(graph: PropertyGraph): Unit = {
+
+      println("\n\nQuery 5.1: MATCH (p:phenotypic_feature) RETURN p\n\n")
+      var r = graph.cypher("MATCH (p: phenotypic_feature) RETURN p")
+      r.show
+
+      println("\n\nQuery 5.2: MATCH (d:disease_or_phenotypic_feature) RETURN d\n\n")
+      r = graph.cypher("MATCH (d: disease_or_phenotypic_feature) RETURN d")
+      r.show
+
+   }
+
+
    def execute(): PropertyGraph = {
 
     //val jsonDataFile: String = "target/robodb2.json"
@@ -434,6 +446,8 @@ object jsonExecutor {
       val geneDf2 = createFilteredFrame(new_nodesDf, "gene", "gene_node_type", "gene")
       val diseaseDf2 = createFilteredFrame(new_nodesDf, "disease", "disease_node_type", "disease")
       val chem_substDf2 = createFilteredFrame(new_nodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
+      val phen_featDf2 = createFilteredFrame(new_nodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
+      val dis_phen_featDf2 = createFilteredFrame(new_nodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
 
       println("\n\nSCHEMA FOR CHEMICAL SUBSTANCE DF:\n\n")
       chem_substDf2.printSchema()
@@ -443,17 +457,19 @@ object jsonExecutor {
       implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
       println("   CREATING MORPHEUS TABLES . . .")
-
       // Note: the names in quotes below have to match your variable type name in your Cypher query
       val geneTable = MorpheusNodeTable(Set("Gene"), geneDf2)
       val diseaseTable = MorpheusNodeTable(Set("Disease"), diseaseDf2)
       val chem_substTable = MorpheusNodeTable(Set("chemical_substance"), chem_substDf2)
+      val phen_featTable = MorpheusNodeTable(Set("phenotypic_feature"), phen_featDf2)
+      val dis_phen_featTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), dis_phen_featDf2)
       val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", indexed_edgesDf.toDF())
 
       println("   CREATING MORPHEUS GRAPHS . . . ")
-      val graph = morpheus.readFrom(geneTable, diseaseTable, chem_substTable, geneToDiseaseRelationshipTable)
+      val graph = morpheus.readFrom(geneTable, diseaseTable, chem_substTable, phen_featTable, dis_phen_featTable, geneToDiseaseRelationshipTable)
 
-      executeQueries(graph)
+      //executeQueries(graph)
+      executeNewQueries(graph)
 
       println("\n\n========================= DONE ============================\n\n")
 
