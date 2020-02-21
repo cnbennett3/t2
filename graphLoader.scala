@@ -217,8 +217,8 @@ object jsonFileDataSource extends DataSource {
       val edgesFileDf = edgesStructDf.select($"col.subject", $"col.object", $"col.relation", $"col.predicate_id", $"col.relation_label")
       val edgesFixedRelColsDf = cleanRelationColumnsData(edgesFileDf)
 
-      val tmpDf_w_id = addUniqueIdCol(edgesFixedRelColsDf)
-      tmpDf_w_id.select("id", "subject", "object", "relation", "predicate_id", "relation_label")
+      val edgesId = addUniqueIdCol(edgesFixedRelColsDf)
+      edgesId.select("id", "subject", "object", "relation", "predicate_id", "relation_label")
    }
 
    def cleanRelationColumnsData(df: DataFrame): DataFrame = {
@@ -237,20 +237,20 @@ object jsonFileDataSource extends DataSource {
    def cleanNodeData(df: DataFrame): DataFrame = {
       val nodesStructDf = df.select(explode($"nodes"))
       val nodesFileDf = nodesStructDf.select($"col.id", $"col.category", $"col.name", $"col.equivalent_identifiers")
-      val tmpDf = nodesFileDf.withColumnRenamed("id","curie_or_id")
-      var tmpDf_w_id = addUniqueIdCol(tmpDf)
-      tmpDf_w_id.select("id", "curie_or_id", "category", "name", "equivalent_identifiers")
+      val nodesRenColDf = nodesFileDf.withColumnRenamed("id","curie_or_id")
+      var nodesId = addUniqueIdCol(nodesRenColDf)
+      nodesId.select("id", "curie_or_id", "category", "name", "equivalent_identifiers")
    }
 
-   def addUniqueIdCol(inDf: DataFrame): DataFrame = {
-      val tmpDF = inDf.withColumn("id", lit(0L))
-      if (tmpDF.columns.toSeq.contains("subject")) {
+   def addUniqueIdCol(df: DataFrame): DataFrame = {
+      val idDf = df.withColumn("id", lit(0L))
+      if (idDf.columns.toSeq.contains("subject")) {
          // Its an edge dataframe, so use the global edge unique id counter
-         tmpDF.withColumn("id", callUDF("nextEdgeIdUDF", $"id"))
+         idDf.withColumn("id", callUDF("nextEdgeIdUDF", $"id"))
       }
       else {
          // its a node dataframe . . .
-         tmpDF.withColumn("id", callUDF("nextNodeIdUDF", $"id"))
+         idDf.withColumn("id", callUDF("nextNodeIdUDF", $"id"))
       }
    }
 }
@@ -296,8 +296,8 @@ object jsonExecutor {
    }
 
    def createIndexMap(df: DataFrame): Map[String, Long] = {
-      val tempDF = df.select("curie_or_id", "id")
-      tempDF.rdd.map(row => (row.getString(0) -> row.getLong(1))).collectAsMap().asInstanceOf[scala.collection.mutable.Map[String,Long]]
+      val idsDf = df.select("curie_or_id", "id")
+      idsDf.rdd.map(row => (row.getString(0) -> row.getLong(1))).collectAsMap().asInstanceOf[scala.collection.mutable.Map[String,Long]]
    }
 
    def triggerUDFEvaluation(df: DataFrame, s: String): DataFrame = {
@@ -314,49 +314,49 @@ object jsonExecutor {
 
       println("\n\n==================== 2 Node Queries ============================\n\n")
 
-      println("\n\n\nQuery 1: MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id\n\n")
-      var r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id limit 10")
+      println("\n\n\nQuery 1: MATCH (g:gene)-[r]-(d:disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id\n\n")
+      var r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g.name, g.curie_or_id, r.relation_label, d.name, d.curie_or_id limit 10")
       r.show
 
-      println("\n\nQuery 2: (5) MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-      spark.time(r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g limit 5"))
+      println("\n\nQuery 2: (5) MATCH (g:gene)-[r]-(d:disease) RETURN g\n\n")
+      spark.time(r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g limit 5"))
       r.show
 
-      println("\n\nQuery 2: (100) MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-      spark.time(r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g limit 100"))
+      println("\n\nQuery 2: (100) MATCH (g:gene)-[r]-(d:disease) RETURN g\n\n")
+      spark.time(r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g limit 100"))
       r.show
 
-      println("\n\nQuery 2: (1000) MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-      spark.time(r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g limit 1000"))
+      println("\n\nQuery 2: (1000) MATCH (g:gene)-[r]-(d:disease) RETURN g\n\n")
+      spark.time(r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g limit 1000"))
       r.show
 
-      println("\n\nQuery 2: (10000) MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-      spark.time(r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g limit 10000"))
+      println("\n\nQuery 2: (10000) MATCH (g:gene)-[r]-(d:disease) RETURN g\n\n")
+      spark.time(r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g limit 10000"))
       r.show
 
-      println("\n\nQuery 2: (100000) MATCH (g:Gene)-[r]-(d:Disease) RETURN g\n\n")
-      spark.time(r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN g limit 100000"))
+      println("\n\nQuery 2: (100000) MATCH (g:gene)-[r]-(d:disease) RETURN g\n\n")
+      spark.time(r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN g limit 100000"))
       r.show
 
-      println("\n\nQuery 3:: MATCH (g:Gene)-[r]-(d:Disease) RETURN d\n\n")
-      r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN d limit 10")
+      println("\n\nQuery 3:: MATCH (g:gene)-[r]-(d:disease) RETURN d\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN d limit 10")
       r.show
 
-      println("\n\nQuery 2: MATCH (g:Gene)-[r]-(d:Disease) RETURN r\n\n")
-      r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN r limit 10")
+      println("\n\nQuery 2: MATCH (g:gene)-[r]-(d:disease) RETURN r\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN r limit 10")
       r.show
 
-      println("\n\nQuery 3: MATCH (g:Gene)-[r]-(d:Disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
-      r = graph.cypher("MATCH (g:Gene)-[r]-(d:Disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
+      println("\n\nQuery 3: MATCH (g:gene)-[r]-(d:disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(d:disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
       r.show
 
       // Name here and below changed from TYR to ENSG00000077498
-      println("\n\nQuery 4: MATCH (g:Gene {name: 'ENSG00000077498'})-[r]-(d:Disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
-      r = graph.cypher("MATCH (g:Gene {name: 'ENSG00000077498'})-[r]-(d:Disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
+      println("\n\nQuery 4: MATCH (g:gene {name: 'ENSG00000077498'})-[r]-(d:disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
+      r = graph.cypher("MATCH (g:gene {name: 'ENSG00000077498'})-[r]-(d:disease) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
       r.show
 
-      println("\n\nQuery 5: MATCH (g:Gene {name: 'ENSG00000077498'})-[r]-(d:Disease {curie_or_id: 'MONDO:0002022'}) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
-      r = graph.cypher("MATCH (g:Gene {name: 'ENSG00000077498'})-[r]-(d:Disease {curie_or_id: 'MONDO:0002022'}) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
+      println("\n\nQuery 5: MATCH (g:gene {name: 'ENSG00000077498'})-[r]-(d:disease {curie_or_id: 'MONDO:0002022'}) RETURN r.subject, g.name, r.relation_label, r.object, d.name\n\n")
+      r = graph.cypher("MATCH (g:gene {name: 'ENSG00000077498'})-[r]-(d:disease {curie_or_id: 'MONDO:0002022'}) RETURN r.subject, g.name, r.relation_label, r.object, d.name limit 10")
       r.show
 
 
@@ -370,28 +370,28 @@ object jsonExecutor {
       r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'}) RETURN *")
       r.show
 
-      println("\n\nQuery 8: MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})--(g:Gene) RETURN *\n\n")
-      r = graph.cypher("MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})--(g:Gene) RETURN *")
+      println("\n\nQuery 8: MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})--(g:gene) RETURN *\n\n")
+      r = graph.cypher("MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})--(g:gene) RETURN *")
       r.show
 
-      println("\n\nQuery 9: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene) RETURN *\n\n")
-      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene) RETURN *")
+      println("\n\nQuery 9: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene) RETURN *\n\n")
+      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene) RETURN *")
       r.show
 
-      println("\n\nQuery 10:  MATCH (g:Gene)-->(c:chemical_substance {name: 'bisphenol A'}) RETURN g.curie_or_id, c.curie_or_id\n\n")
-      r = graph.cypher("MATCH (g:Gene)-->(c:chemical_substance {name: 'bisphenol A'}) RETURN g.curie_or_id, c.curie_or_id")
+      println("\n\nQuery 10:  MATCH (g:gene)-->(c:chemical_substance {name: 'bisphenol A'}) RETURN g.curie_or_id, c.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene)-->(c:chemical_substance {name: 'bisphenol A'}) RETURN g.curie_or_id, c.curie_or_id")
       r.show
 
-      println("\n\nQuery 11: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene {curie_or_id: 'HGNC:11180'})-->(d:Disease) RETURN *\n\n")
-      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene {curie_or_id: 'HGNC:11180'})-->(d:Disease) RETURN *")
+      println("\n\nQuery 11: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene {curie_or_id: 'HGNC:11180'})-->(d:disease) RETURN *\n\n")
+      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene {curie_or_id: 'HGNC:11180'})-->(d:disease) RETURN *")
       r.show
 
       println("\n\nQuery 12:  MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})<--(g:gene {id: 'HGNC:11180'})-->(d:disease) RETURN *\n\n")
-      r = graph.cypher("MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})<--(g:Gene {curie_or_id: 'HGNC:11180'})-->(d:Disease) RETURN *")
+      r = graph.cypher("MATCH (c:chemical_substance {curie_or_id: 'CHEBI:33216'})<--(g:gene {curie_or_id: 'HGNC:11180'})-->(d:disease) RETURN *")
       r.show
 
-      println("\n\nQuery 13: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene {curie_or_id: 'HGNC:11180'})-->(d:Disease {curie_or_id: 'MONDO:0012970'}) RETURN c.name, c.curie_or_id, g.name, g.curie_or_id, d.name, d.curie_or_id, d.equivalent_identifiers\n\n")
-      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:Gene {curie_or_id: 'HGNC:11180'})-->(d:Disease {curie_or_id: 'MONDO:0012970'}) RETURN c.name, c.curie_or_id, g.name, g.curie_or_id, d.name, d.curie_or_id, d.equivalent_identifiers")
+      println("\n\nQuery 13: MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene {curie_or_id: 'HGNC:11180'})-->(d:disease {curie_or_id: 'MONDO:0012970'}) RETURN c.name, c.curie_or_id, g.name, g.curie_or_id, d.name, d.curie_or_id, d.equivalent_identifiers\n\n")
+      r = graph.cypher("MATCH (c:chemical_substance {name: 'bisphenol A'})<--(g:gene {curie_or_id: 'HGNC:11180'})-->(d:disease {curie_or_id: 'MONDO:0012970'}) RETURN c.name, c.curie_or_id, g.name, g.curie_or_id, d.name, d.curie_or_id, d.equivalent_identifiers")
       r.show      
 
    }
@@ -420,15 +420,15 @@ object jsonExecutor {
       edgesDf.schema.printTreeString()
       nodesDf.schema.printTreeString()
 
-      val new_edgesDf = triggerUDFEvaluation(edgesDf, "edges_cleaned")
-      val new_nodesDf = triggerUDFEvaluation(nodesDf, "nodes_cleaned")
+      val newEdgesDf = triggerUDFEvaluation(edgesDf, "edges_cleaned")
+      val newNodesDf = triggerUDFEvaluation(nodesDf, "nodes_cleaned")
 
       println("    AFTER XFM, SCHEMAS:")
-      new_edgesDf.schema.printTreeString()
-      new_nodesDf.schema.printTreeString()
+      newEdgesDf.schema.printTreeString()
+      newNodesDf.schema.printTreeString()
 
       println("    CREATING subjObjIdMap . . .")
-      val subjObjIdMap = createIndexMap(new_nodesDf)
+      val subjObjIdMap = createIndexMap(newNodesDf)
 
       // Create map function using subjObjIdMap and use it on all columns to set source and target
       // Then create columns from result
@@ -436,37 +436,37 @@ object jsonExecutor {
       println("    SETTING SOURCE AND TARGET INDICES . . .")
       def transformRow(row: Row): Row =  Row.fromSeq(row.toSeq ++ Array[Long](subjObjIdMap(row.getString(row.fieldIndex("subject"))), subjObjIdMap(row.getString(row.fieldIndex("object")))))
       def transformRows(iter: Iterator[Row]): Iterator[Row] = iter.map(transformRow)
-      val newSchema = StructType(new_edgesDf.schema.fields ++ Array(StructField("source", LongType, false), StructField("target", LongType, false)))
-      val indexed_edgesDf = spark.createDataFrame(new_edgesDf.rdd.mapPartitions(transformRows), newSchema)
-      indexed_edgesDf.printSchema()
-      indexed_edgesDf.show(2000, false)
-
+      val newSchema = StructType(newEdgesDf.schema.fields ++ Array(StructField("source", LongType, false), StructField("target", LongType, false)))
+      val indexedEdgesDf = spark.createDataFrame(newEdgesDf.rdd.mapPartitions(transformRows), newSchema)
+      indexedEdgesDf.printSchema()
+      indexedEdgesDf.show(2000, false)
 
       println("    CREATING FILTERED DATAFRAMES . . .")
-      val geneDf2 = createFilteredFrame(new_nodesDf, "gene", "gene_node_type", "gene")
-      val diseaseDf2 = createFilteredFrame(new_nodesDf, "disease", "disease_node_type", "disease")
-      val chem_substDf2 = createFilteredFrame(new_nodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
-      val phen_featDf2 = createFilteredFrame(new_nodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
-      val dis_phen_featDf2 = createFilteredFrame(new_nodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
+      val geneDf2 = createFilteredFrame(newNodesDf, "gene", "gene_node_type", "gene")
+      val diseaseDf2 = createFilteredFrame(newNodesDf, "disease", "disease_node_type", "disease")
+      val chemSubstDf2 = createFilteredFrame(newNodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
+      val phenFeatDf2 = createFilteredFrame(newNodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
+      val disPhenFeatDf2 = createFilteredFrame(newNodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
 
       println("\n\nSCHEMA FOR CHEMICAL SUBSTANCE DF:\n\n")
-      chem_substDf2.printSchema()
-      chem_substDf2.show(10000,false)
+      chemSubstDf2.printSchema()
+      chemSubstDf2.show(10000,false)
 
       println ("   INITIALIZING MORPHEUS . . .")
       implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
       println("   CREATING MORPHEUS TABLES . . .")
-      // Note: the names in quotes below have to match your variable type name in your Cypher query
-      val geneTable = MorpheusNodeTable(Set("Gene"), geneDf2)
-      val diseaseTable = MorpheusNodeTable(Set("Disease"), diseaseDf2)
-      val chem_substTable = MorpheusNodeTable(Set("chemical_substance"), chem_substDf2)
-      val phen_featTable = MorpheusNodeTable(Set("phenotypic_feature"), phen_featDf2)
-      val dis_phen_featTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), dis_phen_featDf2)
-      val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", indexed_edgesDf.toDF())
+      // Note: the names in quotes below have to match the variable type name in your Cypher query
+      val geneTable = MorpheusNodeTable(Set("gene"), geneDf2)
+      val diseaseTable = MorpheusNodeTable(Set("disease"), diseaseDf2)
+      val chemSubstTable = MorpheusNodeTable(Set("chemical_substance"), chemSubstDf2)
+      val phenFeatTable = MorpheusNodeTable(Set("phenotypic_feature"), phenFeatDf2)
+      val disPhenFeatTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), disPhenFeatDf2)
+
+      val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", indexedEdgesDf.toDF())
 
       println("   CREATING MORPHEUS GRAPHS . . . ")
-      val graph = morpheus.readFrom(geneTable, diseaseTable, chem_substTable, phen_featTable, dis_phen_featTable, geneToDiseaseRelationshipTable)
+      val graph = morpheus.readFrom(geneTable, diseaseTable, chemSubstTable, phenFeatTable, disPhenFeatTable, geneToDiseaseRelationshipTable)
 
       //executeQueries(graph)
       executeNewQueries(graph)
