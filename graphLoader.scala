@@ -20,6 +20,9 @@ case class Disease(id: Long, curie_or_id:String, category:String, name:String, e
 case class ChemicalSubstance(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, chem_subst_node_type: String) extends Node
 case class PhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, phenotypic_feature_node_type: String) extends Node
 case class DiseaseOrPhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_or_phenotypic_feature_node_type: String) extends Node
+case class AnatomicalEntity(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, anatomical_entity_node_type: String) extends Node
+case class BiologicalProcess(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, biological_process_node_type: String) extends Node
+case class BiologicalProcessOrActivity(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, biological_process_or_activity_node_type: String) extends Node
 
 @RelationshipType("CAUSES_CONDITION")
 case class GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
@@ -397,7 +400,7 @@ object jsonExecutor {
    }
 
    def executeNewQueries(graph: PropertyGraph): Unit = {
-
+/*
       println("\n\nQuery 5.1: MATCH (p:phenotypic_feature) RETURN p\n\n")
       var r = graph.cypher("MATCH (p: phenotypic_feature) RETURN p")
       r.show
@@ -406,6 +409,17 @@ object jsonExecutor {
       r = graph.cypher("MATCH (d: disease_or_phenotypic_feature) RETURN d")
       r.show
 
+      println("\n\nQuery 5.3: MATCH (a:anatomical_entity) RETURN a\n\n")
+      r = graph.cypher("MATCH (a:anatomical_entity) RETURN a")
+      r.show
+*/
+      println("\n\nQuery 5.4: MATCH (b:biological_process) RETURN b\n\n")
+      var r = graph.cypher("MATCH (b:biological_process) RETURN b")
+      r.show
+
+      println("\n\nQuery 5.5: MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id")
+      r.show
    }
 
 
@@ -447,6 +461,9 @@ object jsonExecutor {
       val chemSubstDf2 = createFilteredFrame(newNodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
       val phenFeatDf2 = createFilteredFrame(newNodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
       val disPhenFeatDf2 = createFilteredFrame(newNodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
+      val anaEntityDf2 = createFilteredFrame(newNodesDf, "anatomical_entity", "anatomical_entity_node_type", "anatomical_entity")
+      val bioProcDf2 = createFilteredFrame(newNodesDf, "biological_process", "biological_process_node_type", "biological_process")
+      val bioProcOrActDf2 = createFilteredFrame(newNodesDf, "biological_process_or_activity", "biological_process_or_activity_node_type", "biological_process_or_activity")
 
       println("\n\nSCHEMA FOR CHEMICAL SUBSTANCE DF:\n\n")
       chemSubstDf2.printSchema()
@@ -462,11 +479,14 @@ object jsonExecutor {
       val chemSubstTable = MorpheusNodeTable(Set("chemical_substance"), chemSubstDf2)
       val phenFeatTable = MorpheusNodeTable(Set("phenotypic_feature"), phenFeatDf2)
       val disPhenFeatTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), disPhenFeatDf2)
+      val anaEntityTable = MorpheusNodeTable(Set("anatomical_entity"), anaEntityDf2)
+      val bioProcTable = MorpheusNodeTable(Set("biological_process"), bioProcDf2)
+      val bioProcOrActTable = MorpheusNodeTable(Set("biological_process_or_activity"), bioProcOrActDf2)
 
       val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", indexedEdgesDf.toDF())
 
-      println("   CREATING MORPHEUS GRAPHS . . . ")
-      val graph = morpheus.readFrom(geneTable, diseaseTable, chemSubstTable, phenFeatTable, disPhenFeatTable, geneToDiseaseRelationshipTable)
+      println("   CREATING MORPHEUS GRAPH . . . ")
+      val graph = morpheus.readFrom(geneTable, diseaseTable, chemSubstTable, phenFeatTable, disPhenFeatTable, anaEntityTable, bioProcTable, bioProcOrActTable, geneToDiseaseRelationshipTable)
 
       //executeQueries(graph)
       executeNewQueries(graph)
