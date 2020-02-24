@@ -15,18 +15,25 @@ import scala.language.postfixOps
 import java.util.concurrent.atomic.AtomicLong
 
 println ("    Defining case classes.")
-case class Gene(id:Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
-case class Disease(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
-case class ChemicalSubstance(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, chem_subst_node_type: String) extends Node
-case class PhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, phenotypic_feature_node_type: String) extends Node
-case class DiseaseOrPhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_or_phenotypic_feature_node_type: String) extends Node
 case class AnatomicalEntity(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, anatomical_entity_node_type: String) extends Node
 case class BiologicalProcess(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, biological_process_node_type: String) extends Node
-case class BiologicalProcessOrActivity(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, biological_process_or_activity_node_type: String) extends Node
+case class Cell(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, cell_node_type: String) extends Node
+case class CellularComponent(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, cellular_component_node_type: String) extends Node
+case class ChemicalSubstance(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, chem_subst_node_type: String) extends Node
+case class Disease(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_node_type: String) extends Node
+case class DiseaseOrPhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, disease_or_phenotypic_feature_node_type: String) extends Node
+case class Gene(id:Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_node_type: String) extends Node
+case class GeneFamily(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_family_node_type: String) extends Node
+case class GeneOrGeneProduct(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_or_gene_product_node_type: String) extends Node
+case class GeneProduct(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, gene_product_node_type: String) extends Node
+case class GeneticCondition(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, genetic_condition_node_type: String) extends Node
+case class MolecularActivity(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, moleculular_activity_node_type: String) extends Node
+case class NamedThing(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, named_thing_node_type: String) extends Node
+case class Pathway(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, pathway_node_type: String) extends Node
+case class PhenotypicFeature(id: Long, curie_or_id:String, category:String, name:String, equivalent_identifiers:String, phenotypic_feature_node_type: String) extends Node
 
 @RelationshipType("CAUSES_CONDITION")
 case class GeneToDiseaseRelationship(id:Long, source:Long, target:Long, subject:String, obj:String, relation:String, predicate_id:String, relation_label:String) extends Relationship
-
 
 println ("    Defining AtomicLongGenerator class.")
 object AtomicLongIdGen {
@@ -400,32 +407,84 @@ object jsonExecutor {
    }
 
    def executeNewQueries(graph: PropertyGraph): Unit = {
-/*
-      println("\n\nQuery 5.1: MATCH (p:phenotypic_feature) RETURN p\n\n")
-      var r = graph.cypher("MATCH (p: phenotypic_feature) RETURN p")
+
+      println("\n\n==================== Query New Node Types ============================\n\n")
+
+      // anatomical_entity
+      println("\n\nQuery 5.3: MATCH (a:anatomical_entity) RETURN a\n\n")
+      var r = graph.cypher("MATCH (a:anatomical_entity) RETURN a")
       r.show
 
+      // biological_process
+      println("\n\nQuery 5.4: MATCH (b:biological_process) RETURN b\n\n")
+      r = graph.cypher("MATCH (b:biological_process) RETURN b")
+      r.show
+
+      // biological_process_or_activity
+      println("\n\nQuery 5.5: MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id")
+      r.show
+
+      // cell
+      println("\n\nQuery 5.6: MATCH (c:cell)--(g:gene) RETURN c.curie_or_id, g.curie_or_id\n\n")
+      r = graph.cypher("MATCH (c:cell)--(g:gene) RETURN c.curie_or_id, g.curie_or_id")
+      r.show
+
+      // cellular_component
+      println("\n\nQuery 5.7: MATCH (c:cellular_component {curie_or_id: 'GO:0005615'})--(g:gene) RETURN c.curie_or_id, g.curie_or_id\n\n")
+      r = graph.cypher("MATCH (c:cellular_component {curie_or_id: 'GO:0005615'})--(g:gene) RETURN c.curie_or_id, g.curie_or_id")
+      r.show
+
+      // disease_or_phenotypic_feature
       println("\n\nQuery 5.2: MATCH (d:disease_or_phenotypic_feature) RETURN d\n\n")
       r = graph.cypher("MATCH (d: disease_or_phenotypic_feature) RETURN d")
       r.show
 
-      println("\n\nQuery 5.3: MATCH (a:anatomical_entity) RETURN a\n\n")
-      r = graph.cypher("MATCH (a:anatomical_entity) RETURN a")
-      r.show
-*/
-      println("\n\nQuery 5.4: MATCH (b:biological_process) RETURN b\n\n")
-      var r = graph.cypher("MATCH (b:biological_process) RETURN b")
+      // gene_family
+      println("\n\nQuery 5.9: MATCH (g:gene_family {curie_or_id: 'HGNC.FAMILY:40'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene_family {curie_or_id: 'HGNC.FAMILY:40'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id")
       r.show
 
-      println("\n\nQuery 5.5: MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id\n\n")
-      r = graph.cypher("MATCH (g:gene {curie_or_id: 'HGNC:77'})-[r]-(b:biological_process_or_activity) RETURN g.curie_or_id, b.curie_or_id")
+      // gene_or_gene_product
+      println("\n\nQuery 5.9: MATCH (g:gene_or_gene_product {curie_or_id: 'CHEBI:681569'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene_or_gene_product {curie_or_id: 'CHEBI:681569'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id")
+      r.show
+
+      // gene_product
+      println("\n\nQuery 5.10: MATCH (g:gene_product {curie_or_id: 'CHEBI:681569'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene_product {curie_or_id: 'CHEBI:681569'})--(h:gene) RETURN g.curie_or_id, h.curie_or_id")
+      r.show
+
+      // geneticCondition
+      println("\n\nQuery 5.11: MATCH (g:gene)-[r]-(h:genetic_condition {curie_or_id: 'MONDO:0015547'}) RETURN g.curie_or_id, r.relation_label, h.name\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(h:genetic_condition {curie_or_id: 'MONDO:0015547'}) RETURN g.curie_or_id, r.relation_label, h.name")
+      r.show
+
+      // molecularActivity
+      println("\n\nQuery 5.12: MATCH (g:gene)-[r]-(h:molecular_activity {curie_or_id: 'GO:0016757'}) RETURN h.curie_or_id, r.relation_label, g.curie_or_id\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(h:molecular_activity {curie_or_id: 'GO:0016757'}) RETURN h.curie_or_id, r.relation_label, g.curie_or_id")
+      r.show
+
+      // named_thing
+      println("\n\nQuery 5.13: MATCH (n:named_thing)-->(c:chemical_substance) RETURN n.curie_or_id, c.curie_or_id LIMIT 5\n\n")
+      r = graph.cypher("MATCH (n:named_thing)-->(c:chemical_substance) RETURN n.curie_or_id, c.curie_or_id LIMIT 5")
+      r.show
+
+      // phenotypic_feature
+      println("\n\nQuery 5.14: MATCH (p:phenotypic_feature) RETURN p\n\n")
+      r = graph.cypher("MATCH (p: phenotypic_feature) RETURN p.curie_or_id, p.name, p.category LIMIT 50")
+      r.show
+
+      // pathway
+      println("\n\nQuery 5.15: MATCH (g:gene)-[r]-(p:pathway {curie_or_id: 'REACT:R-HSA-114608'}) RETURN g.curie_or_id , r.relation_label, p.name\n\n")
+      r = graph.cypher("MATCH (g:gene)-[r]-(p:pathway {curie_or_id: 'REACT:R-HSA-114608'}) RETURN g.curie_or_id , r.relation_label, p.name")
       r.show
    }
 
 
    def execute(): PropertyGraph = {
 
-    //val jsonDataFile: String = "target/robodb2.json"
+      //val jsonDataFile: String = "target/robodb2.json"
       val jsonDataFile: String = "target/robodb_gene_9999.json"
       val jsonDf = readJsonData(jsonDataFile)
       val edgesDf = prepareEdgeData(jsonDf)
@@ -456,39 +515,55 @@ object jsonExecutor {
       indexedEdgesDf.show(2000, false)
 
       println("    CREATING FILTERED DATAFRAMES . . .")
-      val geneDf2 = createFilteredFrame(newNodesDf, "gene", "gene_node_type", "gene")
-      val diseaseDf2 = createFilteredFrame(newNodesDf, "disease", "disease_node_type", "disease")
-      val chemSubstDf2 = createFilteredFrame(newNodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
-      val phenFeatDf2 = createFilteredFrame(newNodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
-      val disPhenFeatDf2 = createFilteredFrame(newNodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
       val anaEntityDf2 = createFilteredFrame(newNodesDf, "anatomical_entity", "anatomical_entity_node_type", "anatomical_entity")
       val bioProcDf2 = createFilteredFrame(newNodesDf, "biological_process", "biological_process_node_type", "biological_process")
       val bioProcOrActDf2 = createFilteredFrame(newNodesDf, "biological_process_or_activity", "biological_process_or_activity_node_type", "biological_process_or_activity")
+      val cellDf2 = createFilteredFrame(newNodesDf, "cell", "cell_node_type", "cell")
+      val cellCompDf2 = createFilteredFrame(newNodesDf, "cellular_component", "cellular_component_node_type", "cellular_component")
+      val chemSubstDf2 = createFilteredFrame(newNodesDf, "chemical_substance", "chemical_subst_node_type", "chemical_substance")
+      val diseaseDf2 = createFilteredFrame(newNodesDf, "disease", "disease_node_type", "disease")
+      val disPhenFeatDf2 = createFilteredFrame(newNodesDf, "disease_or_phenotypic_feature", "dis_or_phenotypic_feature_node_type", "disease_or_phenotypic_feature")
+      val geneDf2 = createFilteredFrame(newNodesDf, "gene", "gene_node_type", "gene")
+      val geneFamDf2 = createFilteredFrame(newNodesDf, "gene_family", "gene_familty_node_type", "gene_family")
+      val geneOrGeneProdDf2 = createFilteredFrame(newNodesDf, "gene_or_gene_product", "gene_or_gene_product_node_type", "gene_or_gene_product")
+      val geneProdDf2 = createFilteredFrame(newNodesDf, "gene_product", "gene_product_node_type", "gene_product")
+      val geneticCondDf2 = createFilteredFrame(newNodesDf, "genetic_condition", "genetic_condition_node_type", "genetic_condition")
+      val molecularActDf2 = createFilteredFrame(newNodesDf, "molecular_activity", "molecular_activity_node_type", "molecular_activity")
+      val namedThingDf2 = createFilteredFrame(newNodesDf, "named_thing", "named_thing_node_type", "named_thing")
+      val pathwayDf2 = createFilteredFrame(newNodesDf, "pathway", "pathway_node_type", "pathway")
+      val phenFeatDf2 = createFilteredFrame(newNodesDf, "phenotypic_feature", "phenotypic_feature_node_type", "phenotypic_feature")
 
-      println("\n\nSCHEMA FOR CHEMICAL SUBSTANCE DF:\n\n")
-      chemSubstDf2.printSchema()
-      chemSubstDf2.show(10000,false)
 
       println ("   INITIALIZING MORPHEUS . . .")
       implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
       println("   CREATING MORPHEUS TABLES . . .")
-      // Note: the names in quotes below have to match the variable type name in your Cypher query
-      val geneTable = MorpheusNodeTable(Set("gene"), geneDf2)
-      val diseaseTable = MorpheusNodeTable(Set("disease"), diseaseDf2)
-      val chemSubstTable = MorpheusNodeTable(Set("chemical_substance"), chemSubstDf2)
-      val phenFeatTable = MorpheusNodeTable(Set("phenotypic_feature"), phenFeatDf2)
-      val disPhenFeatTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), disPhenFeatDf2)
+      // The names in quotes below must match the variable type name in your Cypher queries!
       val anaEntityTable = MorpheusNodeTable(Set("anatomical_entity"), anaEntityDf2)
       val bioProcTable = MorpheusNodeTable(Set("biological_process"), bioProcDf2)
       val bioProcOrActTable = MorpheusNodeTable(Set("biological_process_or_activity"), bioProcOrActDf2)
+      val cellTable = MorpheusNodeTable(Set("cell"), cellDf2)
+      val cellCompTable = MorpheusNodeTable(Set("cellular_component"), cellCompDf2)
+      val chemSubstTable = MorpheusNodeTable(Set("chemical_substance"), chemSubstDf2)
+      val diseaseTable = MorpheusNodeTable(Set("disease"), diseaseDf2)
+      val disPhenFeatTable = MorpheusNodeTable(Set("disease_or_phenotypic_feature"), disPhenFeatDf2)
+      val geneTable = MorpheusNodeTable(Set("gene"), geneDf2)
+      val geneFamTable = MorpheusNodeTable(Set("gene_family"), geneFamDf2)
+      val geneOrGeneProdTable = MorpheusNodeTable(Set("gene_or_gene_product"), geneOrGeneProdDf2)
+      val geneProdTable = MorpheusNodeTable(Set("gene_product"), geneProdDf2)
+      val geneticCondTable = MorpheusNodeTable(Set("genetic_condition"), geneticCondDf2)
+      val molecularActTable = MorpheusNodeTable(Set("molecular_activity"), molecularActDf2)
+      val namedThingTable = MorpheusNodeTable(Set("named_thing"), namedThingDf2)
+      val pathwayTable = MorpheusNodeTable(Set("pathway"), pathwayDf2)
+      val phenFeatTable = MorpheusNodeTable(Set("phenotypic_feature"), phenFeatDf2)
 
       val geneToDiseaseRelationshipTable = MorpheusRelationshipTable("GENE_TO_DISEASE", indexedEdgesDf.toDF())
 
       println("   CREATING MORPHEUS GRAPH . . . ")
-      val graph = morpheus.readFrom(geneTable, diseaseTable, chemSubstTable, phenFeatTable, disPhenFeatTable, anaEntityTable, bioProcTable, bioProcOrActTable, geneToDiseaseRelationshipTable)
+      val graph = morpheus.readFrom(anaEntityTable, bioProcTable, bioProcOrActTable, cellTable, cellCompTable, chemSubstTable, diseaseTable, disPhenFeatTable, geneTable, 
+                  geneFamTable, geneOrGeneProdTable, geneProdTable, geneticCondTable, molecularActTable, namedThingTable, pathwayTable, phenFeatTable, geneToDiseaseRelationshipTable)
 
-      //executeQueries(graph)
+      executeQueries(graph)
       executeNewQueries(graph)
 
       println("\n\n========================= DONE ============================\n\n")
