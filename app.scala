@@ -34,3 +34,5 @@ val result = graph.cypher("MATCH (n:Person) RETURN n.name")
 val names: Set[String] = result.records.table.df.collect().map(_.getAs[String]("n_name")).toSet
 
 println(names)
+
+//val records = result.getRecords
