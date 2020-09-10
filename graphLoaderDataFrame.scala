@@ -1,0 +1,106 @@
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.col
+import org.opencypher.morpheus.api.MorpheusSession
+import org.opencypher.morpheus.api.io.MorpheusElementTable
+import org.opencypher.okapi.api.io.conversion.{ElementMapping, NodeMappingBuilder, RelationshipMappingBuilder}
+
+import scala.collection.mutable.WrappedArray
+
+trait KGXFileReader{
+  /**
+   *  Creates morpheus element table
+   */
+  def convertKGXFileToDataFrame(filePath: String, session: MorpheusSession): DataFrame = {
+    /**
+     * Creates a dataframe from a json formatted kgx file
+     */
+
+    session.sparkSession.read.format("json").option("inferSchema", "true").load(filePath).toDF
+  }
+
+  def createElementTables(filePath: String, session:MorpheusSession): Seq[MorpheusElementTable]
+}
+
+
+object KGXNodesFileReader extends KGXFileReader {
+
+  override def createElementTables(filepath: String, session: MorpheusSession): Seq[MorpheusElementTable] = {
+    /***
+     * Reads kgx nodes files and converts them to to MorpheusElements table
+     */
+    val nodesDF: DataFrame = this.convertKGXFileToDataFrame(filePath=filepath, session=session)
+    var elementTables = Seq[MorpheusElementTable]()
+    val nodeTypes = nodesDF.select(col("category")).distinct.collect()
+    for( nodeType <- nodeTypes){
+      val nodeTypeSeq :Set[String] = nodeType.get(0).asInstanceOf[WrappedArray[String]].toSet[String]
+      var filteredNodes = nodesDF.where(nodesDF("category") === nodeType.get(0))
+      // create a new column for internal id
+      filteredNodes = filteredNodes.withColumn("_id", filteredNodes.col("id"))
+      val node_schema = filteredNodes.schema.filter(_.name != "_id")
+
+      val nodeMapping: ElementMapping = NodeMappingBuilder.create(
+        nodeIdKey = "_id",
+        impliedLabels = nodeTypeSeq,
+        propertyKeys = node_schema.map(property => property.name).toSet[String]
+      )
+      val nodeTable: MorpheusElementTable = MorpheusElementTable.create(nodeMapping, filteredNodes)
+      elementTables = elementTables ++ Seq(nodeTable)
+    }
+    elementTables
+  }
+}
+
+object KGXEdgesReader extends KGXFileReader {
+  override def createElementTables(filePath: String, session: MorpheusSession): Seq[MorpheusElementTable] = {
+    /**
+     *
+     */
+    val edgeDF: DataFrame = session.sparkSession.read.format("json").option("inferSchema", "true").load(edgesFileName).toDF
+    val edgeTypes = edgeDF.select(col("edge_label")).distinct.collect()
+    var elementTables = Seq[MorpheusElementTable]()
+    for (edgeType <- edgeTypes) {
+      val edgeTypeStr: String = edgeType.get(0).asInstanceOf[String]
+      var filtered_edges = edgeDF.filter(edgeDF.col("edge_label") === edgeTypeStr)
+      val edgesTableSchema = filtered_edges.schema
+
+      // Morpheus converts source target and id keys to Long type.
+      // To avoid conversion of the original we will dup these columns.
+      filtered_edges = filtered_edges
+        .withColumn("_source_id", filtered_edges.col("subject"))
+        .withColumn("_target_id", filtered_edges.col("object"))
+        .withColumn("_id", filtered_edges.col("id"))
+
+
+      //
+      val relationshipMapping: ElementMapping = RelationshipMappingBuilder.create(
+        sourceIdKey = "_id",
+        sourceStartNodeKey = "_source_id",
+        sourceEndNodeKey = "_target_id",
+        relType = edgeTypeStr,
+        properties = edgesTableSchema.map(property => property.name).toSet[String]
+      )
+      val edgeTable = MorpheusElementTable.create(relationshipMapping, filtered_edges)
+      elementTables = elementTables ++ Seq(edgeTable)
+    }
+    // Give back element tables
+    elementTables
+  }
+}
+
+implicit val morpheus: MorpheusSession = MorpheusSession.local()
+// Morpheus sesssion
+
+val nodeFileName = "./test_small_files/nodes_small.json"
+val edgesFileName = "./test_small_files/edges_small.json"
+
+val nodeElements = KGXNodesFileReader.createElementTables(nodeFileName, morpheus)
+val edgeElements = KGXEdgesReader.createElementTables(edgesFileName, morpheus)
+
+val allElements: Seq[MorpheusElementTable] = nodeElements ++ edgeElements
+val graph2= morpheus.readFrom(allElements(0), allElements.slice(1, allElements.length))
+graph2.cache()
+//// Test to see if all went well
+val result = graph2.cypher("Match ()-[e]-() return e limit 10")
+result.records.table.df.show()
+
+
