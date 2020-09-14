@@ -44,6 +44,7 @@ object KGXNodesFileReader extends KGXFileReader {
         propertyKeys = node_schema.map(property => property.name).toSet[String]
       )
       val nodeTable: MorpheusElementTable = MorpheusElementTable.create(nodeMapping, filteredNodes)
+      nodeTable.cache()
       elementTables = elementTables ++ Seq(nodeTable)
     }
     elementTables
@@ -55,7 +56,12 @@ object KGXEdgesReader extends KGXFileReader {
     /**
      *
      */
-    val edgeDF: DataFrame = session.sparkSession.read.format("json").option("inferSchema", "true").load(edgesFileName).toDF
+    val edgeDF: DataFrame = session.sparkSession
+      .read
+      .format("json")
+      .option("inferSchema", "true")
+      .load(filePath)
+      .toDF
     val edgeTypes = edgeDF.select(col("edge_label")).distinct.collect()
     var elementTables = Seq[MorpheusElementTable]()
     for (edgeType <- edgeTypes) {
@@ -80,6 +86,7 @@ object KGXEdgesReader extends KGXFileReader {
         properties = edgesTableSchema.map(property => property.name).toSet[String]
       )
       val edgeTable = MorpheusElementTable.create(relationshipMapping, filtered_edges)
+      edgeTable.cache()
       elementTables = elementTables ++ Seq(edgeTable)
     }
     // Give back element tables
@@ -97,7 +104,7 @@ val nodeElements = KGXNodesFileReader.createElementTables(nodeFileName, morpheus
 val edgeElements = KGXEdgesReader.createElementTables(edgesFileName, morpheus)
 
 val allElements: Seq[MorpheusElementTable] = nodeElements ++ edgeElements
-val graph2= morpheus.readFrom(allElements(0), allElements.slice(1, allElements.length))
+val graph2= morpheus.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
 graph2.cache()
 //// Test to see if all went well
 val result = graph2.cypher("Match ()-[e]-() return e limit 10")
