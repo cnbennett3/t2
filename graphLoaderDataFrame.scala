@@ -35,19 +35,20 @@ object KGXNodesFileReader extends KGXFileReader {
     var elementTables = Seq[MorpheusElementTable]()
     val nodeTypes = nodesDF.select(col("category")).distinct.collect()
     for( nodeType <- nodeTypes){
-      val nodeTypeSeq :Set[String] = nodeType.get(0).asInstanceOf[WrappedArray[String]].toSet[String]
-      var filteredNodes = nodesDF.where(nodesDF("category") === nodeType.get(0))
+      val nodeTypeSeq :Array[String] = nodeType.get(0).asInstanceOf[WrappedArray[String]].toArray[String]
+      var filteredNodes = nodesDF.where(nodesDF("category") === nodeTypeSeq)
       // create a new column for internal id
       filteredNodes = filteredNodes.withColumn("_id", filteredNodes.col("id"))
       val node_schema = filteredNodes.schema.filter(_.name != "_id")
-
       val nodeMapping: ElementMapping = NodeMappingBuilder.create(
         nodeIdKey = "_id",
-        impliedLabels = nodeTypeSeq,
+        impliedLabels = nodeTypeSeq.toSet,
         propertyKeys = node_schema.map(property => property.name).toSet[String]
       )
+      filteredNodes.cache()
+      filteredNodes.sort()
+      filteredNodes.count()
       val nodeTable: MorpheusElementTable = MorpheusElementTable.create(nodeMapping, filteredNodes)
-      nodeTable.cache()
       elementTables = elementTables ++ Seq(nodeTable)
     }
     elementTables
@@ -79,7 +80,6 @@ object KGXEdgesFileReader extends KGXFileReader {
         .withColumn("_target_id", filtered_edges.col("object"))
         .withColumn("_id", filtered_edges.col("id"))
 
-
       //
       val relationshipMapping: ElementMapping = RelationshipMappingBuilder.create(
         sourceIdKey = "_id",
@@ -88,8 +88,11 @@ object KGXEdgesFileReader extends KGXFileReader {
         relType = edgeTypeStr,
         properties = edgesTableSchema.map(property => property.name).toSet[String]
       )
+      filtered_edges.cache()
+      filtered_edges.sort()
+      filtered_edges.count()
       val edgeTable = MorpheusElementTable.create(relationshipMapping, filtered_edges)
-      edgeTable.cache()
+      
       elementTables = elementTables ++ Seq(edgeTable)
     }
     // Give back element tables
@@ -116,7 +119,7 @@ implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
 var nodeElements: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
 var edgeElements: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
-val basePath = "/home/yaphet"
+val basePath = "/home/kebedey"
 val nodeFileNames = Seq(
   basePath + "/test_data_t2/Human_GOA_node_file.json",
   basePath + "/test_data_t2/intact_node_file.json",
@@ -128,6 +131,7 @@ val edgeFileNames = Seq(
 
 for (fileName <- nodeFileNames){
   println("***************************")
+  println("Started parsing: " + fileName)
   val start = System.currentTimeMillis()
   val elements = KGXNodesFileReader.createElementTables(fileName, morpheus)
   nodeElements = nodeElements ++ elements
