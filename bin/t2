@@ -57,9 +57,12 @@ spark () {
     shell () {
         $SPARK_HOME/bin/spark-shell \
             --master=spark://0.0.0.0:7077 \
-            --conf spark.neo4j.bolt.username=neo4j \
-            --conf spark.neo4j.bolt.password=ncatsgamma \
-            --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6
+            --executor-memory 4g \
+            --driver-memory 3g \
+            --conf spark.sql.legacy.allowUntypedScalaUDF=True \
+            --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6 \
+            --jars=./target/scala-2.12/t2-sbt-assembly-0.1.jar
+
     }
     $*
 }
@@ -79,6 +82,11 @@ robokop () {
         tar xf robokg.csv.tar
     }
     $*
+}
+
+buildjar () {
+  sbt clean
+  sbt assembly
 }
 
 $*
