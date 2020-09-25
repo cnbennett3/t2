@@ -5,4 +5,4 @@ implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
 val core: Core = new Core(morpheus)
 
-val g = core.makeGraph("v0.1" )
+val g = core.makeGraph("v0.1")
