@@ -1,9 +1,9 @@
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{StructField, StructType}
 import org.opencypher.morpheus.api.MorpheusSession
 import org.opencypher.morpheus.api.io.MorpheusElementTable
 import org.opencypher.okapi.api.io.conversion.{ElementMapping, NodeMappingBuilder, RelationshipMappingBuilder}
+
 import scala.collection.mutable.WrappedArray
 implicit val morpheus: MorpheusSession = MorpheusSession.local()
 
