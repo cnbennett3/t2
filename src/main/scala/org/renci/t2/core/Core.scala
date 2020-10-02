@@ -1,5 +1,7 @@
 package org.renci.t2.core
 
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.opencypher.morpheus.api.MorpheusSession
 import org.opencypher.morpheus.api.io.MorpheusElementTable
 import org.opencypher.morpheus.impl.table.SparkTable
@@ -8,9 +10,9 @@ import org.renci.t2.parser.{KGXEdgesFileReader, KGXNodesFileReader}
 import org.renci.t2.util.{KGXMetaData, Version, logger}
 
 
-class Core(morpheusSession: MorpheusSession) {
+class Core() {
 
-//  var graph: RelationalCypherGraph[SparkTable.DataFrameTable]
+  private val morpheusSession: MorpheusSession = this.createMorpheusSession()
 
   def makeGraph(version: String):RelationalCypherGraph[SparkTable.DataFrameTable] = {
     val kgxFilesGrabber: KGXMetaData = new KGXMetaData("https://stars.renci.org/var/kgx_data")
@@ -37,7 +39,7 @@ class Core(morpheusSession: MorpheusSession) {
       allEdgeTables = allEdgeTables ++ edgeElementTables
     }
     val allElements: Seq[MorpheusElementTable] = allNodeTables ++ allEdgeTables
-    val graph = morpheusSession.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
+    val graph = this.morpheusSession.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
     graph
   }
 
@@ -50,4 +52,16 @@ class Core(morpheusSession: MorpheusSession) {
     logger.info((System.currentTimeMillis() - start).toString)
     logger.info(" ms")
   }
+
+  def createMorpheusSession(): MorpheusSession = {
+    val sparkSession: SparkSession = SparkSession.builder
+      .master("spark://localhost:7077")
+      .appName("app-1")
+      .config("spark.driver.memory", "3g")
+      .config("spark.executor.memory", "4g")
+      .getOrCreate()
+    val morpheusSession: MorpheusSession = MorpheusSession.create(sparkSession)
+    morpheusSession
+  }
+
 }
