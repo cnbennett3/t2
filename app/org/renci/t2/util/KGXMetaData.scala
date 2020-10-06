@@ -26,17 +26,7 @@ class KGXMetaData(var serverRootUrl: String, var metaDataFileName: String = "met
    */
   private def parseFilesMetaData(metadataURL: String): Versions = {
     logger.info("Getting file" + metadataURL)
-    val config: String =
-      """
-        |versions:
-        |- version: v0.1
-        |  nodeFiles:
-        |   - cord19-phenotypes-node-v0.1.json
-        |  edgeFiles:
-        |   - cord19-phenotypes-edge-v0.1.json
-        |""".stripMargin
-
-    //Downloader.getFileAsString(this.serverRootUrl + "/" + metadataURL)
+    val config: String = Downloader.getFileAsString(this.serverRootUrl + "/" + metadataURL)
     logger.debug("Config: ")
     logger.debug(config)
     val json = yaml.parser.parse(config)
