@@ -7,14 +7,14 @@ import play.api.mvc.{AnyContent, BaseController, ControllerComponents, Request}
 import models.CypherQuery
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-
+import services.T2Service
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class CypherQueryController @Inject()(val controllerComponents: ControllerComponents) extends BaseController {
+class CypherQueryController @Inject()(val controllerComponents: ControllerComponents, t2Service: T2Service) extends BaseController {
 
   implicit  val queryReads: Reads[CypherQuery] = ((JsPath \ "query").read[String])map(CypherQuery(_))
 
@@ -26,7 +26,7 @@ class CypherQueryController @Inject()(val controllerComponents: ControllerCompon
         BadRequest(Json.obj("message" -> JsError.toJson(errors)))
       },
       query => {
-        val core:Core = new Core()
+        val core:Core = t2Service.initializeT2Core()
         val graph = core.makeGraph(version = datasetVersion)
         val res = core.runCypherAndReturnJsonString(graph=graph,cypherQuery=query.query)
         Ok(res)

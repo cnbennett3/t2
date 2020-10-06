@@ -8,15 +8,15 @@ import org.opencypher.morpheus.impl.table.SparkTable
 import org.opencypher.okapi.relational.api.graph.RelationalCypherGraph
 import org.renci.t2.parser.{KGXEdgesFileReader, KGXNodesFileReader}
 import org.renci.t2.util.{KGXMetaData, Version, logger}
-//import org.renci.t2.util.Config
 
 
-class Core() {
 
-  private val morpheusSession: MorpheusSession = this.createMorpheusSession()
+class Core(sparkConf: SparkConf , kgxFilesAddress: String) {
+
+  private val morpheusSession: MorpheusSession = this.createMorpheusSession(sparkConf)
 
   def makeGraph(version: String):RelationalCypherGraph[SparkTable.DataFrameTable] = {
-    val kgxServerRoot = "https://stars.renci.org/var/kgx_data" //Config.getConfig("kgxFiles.host")
+    val kgxServerRoot = this.kgxFilesAddress
     val kgxFilesGrabber: KGXMetaData = new KGXMetaData(kgxServerRoot)
     val versionMetadata: Version = kgxFilesGrabber.getVersionData(version)
     var allNodeTables: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
@@ -60,12 +60,9 @@ class Core() {
     graph.cypher(cypherQuery).records.table.df.toJSON.collect.mkString("[", "," , "]" )
   }
 
-  def createMorpheusSession(): MorpheusSession = {
+  def createMorpheusSession(sparkConf: SparkConf): MorpheusSession = {
     val sparkSession: SparkSession = SparkSession.builder
-      .master("spark://localhost:7077")
-      .appName("app-1")
-      .config("spark.driver.memory", "3g")
-      .config("spark.executor.memory", "4g")
+      .config(sparkConf)
       .getOrCreate()
     val morpheusSession: MorpheusSession = MorpheusSession.create(sparkSession)
     morpheusSession

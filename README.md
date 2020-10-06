@@ -15,7 +15,7 @@ Untar in ~/app and rename to spark and hadoop
 <repo-root>$ bin/t2 buildjar
 ```
 
-## Running
+## Running 
 
 In a shell:
 ```

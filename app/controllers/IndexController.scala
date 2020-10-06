@@ -8,13 +8,13 @@ import play.api.libs.json._
 import org.renci.t2.core.Core
 import org.renci.t2.util.{KGXMetaData, Version}
 import play.api.libs.json.JsValue
-
+import services.T2Service
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class IndexController @Inject()(val controllerComponents: ControllerComponents) extends BaseController {
+class IndexController @Inject()(val controllerComponents: ControllerComponents, t2Service: T2Service) extends BaseController {
 
   /**
    * Create an Action to render an HTML page.
@@ -31,24 +31,9 @@ class IndexController @Inject()(val controllerComponents: ControllerComponents) 
   }
 
   def runCount() = Action { implicit request: Request[AnyContent] =>
-    val core:Core = new Core()
+    val core:Core = t2Service.initializeT2Core()
     val graph = core.makeGraph("v0.1")
     core.runCypherAndShow(cypherQuery = "MATCH (c) return count(c)", graph = graph)
     Ok("count is done")
   }
-
-
-
-  def runQuery() = Action { implicit request: Request[AnyContent] =>
-    val core:Core = new Core()
-//    val version = request.getQueryString("version")
-//    val bodyJson: JsResult[QueryModel] = request.body.validate[QueryModel]
-    val version = "v0.1"
-    val graph = core.makeGraph(version = version)
-//    result = bodyJson.fold()
-    val res = core.runCypherAndReturnJsonString(graph=graph,cypherQuery="MATCH (c:disease) return c")
-    Ok(res)
-  }
-
-
 }
