@@ -8,6 +8,7 @@ import org.opencypher.morpheus.impl.table.SparkTable
 import org.opencypher.okapi.relational.api.graph.RelationalCypherGraph
 import org.renci.t2.parser.{KGXEdgesFileReader, KGXNodesFileReader}
 import org.renci.t2.util.{KGXMetaData, Version, logger}
+//import org.renci.t2.util.Config
 
 
 class Core() {
@@ -15,7 +16,8 @@ class Core() {
   private val morpheusSession: MorpheusSession = this.createMorpheusSession()
 
   def makeGraph(version: String):RelationalCypherGraph[SparkTable.DataFrameTable] = {
-    val kgxFilesGrabber: KGXMetaData = new KGXMetaData("https://stars.renci.org/var/kgx_data")
+    val kgxServerRoot = "https://stars.renci.org/var/kgx_data" //Config.getConfig("kgxFiles.host")
+    val kgxFilesGrabber: KGXMetaData = new KGXMetaData(kgxServerRoot)
     val versionMetadata: Version = kgxFilesGrabber.getVersionData(version)
     var allNodeTables: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
     var allEdgeTables: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
@@ -51,6 +53,11 @@ class Core() {
     logger.info("took ")
     logger.info((System.currentTimeMillis() - start).toString)
     logger.info(" ms")
+  }
+
+  def runCypherAndReturnJsonString(cypherQuery: String, graph: RelationalCypherGraph[SparkTable.DataFrameTable]) : String = {
+    val start = System.currentTimeMillis()
+    graph.cypher(cypherQuery).records.table.df.toJSON.collect.mkString("[", "," , "]" )
   }
 
   def createMorpheusSession(): MorpheusSession = {

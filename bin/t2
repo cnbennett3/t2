@@ -61,7 +61,7 @@ spark () {
             --driver-memory 3g \
             --conf spark.sql.legacy.allowUntypedScalaUDF=True \
             --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6 \
-            --jars=./target/scala-2.12/t2-sbt-assembly-0.1.jar
+#            --jars=./target/scala-2.12/t2-sbt-assembly-0.1.jar
 
     }
 
