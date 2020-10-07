@@ -1,5 +1,7 @@
 package org.renci.t2.core
 
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
 import org.opencypher.morpheus.api.MorpheusSession
 import org.opencypher.morpheus.api.io.MorpheusElementTable
 import org.opencypher.morpheus.impl.table.SparkTable
@@ -8,12 +10,14 @@ import org.renci.t2.parser.{KGXEdgesFileReader, KGXNodesFileReader}
 import org.renci.t2.util.{KGXMetaData, Version, logger}
 
 
-class Core(morpheusSession: MorpheusSession) {
 
-//  var graph: RelationalCypherGraph[SparkTable.DataFrameTable]
+class Core(sparkConf: SparkConf , kgxFilesAddress: String) {
+
+  private val morpheusSession: MorpheusSession = this.createMorpheusSession(sparkConf)
 
   def makeGraph(version: String):RelationalCypherGraph[SparkTable.DataFrameTable] = {
-    val kgxFilesGrabber: KGXMetaData = new KGXMetaData("https://stars.renci.org/var/kgx_data")
+    val kgxServerRoot = this.kgxFilesAddress
+    val kgxFilesGrabber: KGXMetaData = new KGXMetaData(kgxServerRoot)
     val versionMetadata: Version = kgxFilesGrabber.getVersionData(version)
     var allNodeTables: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
     var allEdgeTables: Seq[MorpheusElementTable] = Seq[MorpheusElementTable]()
@@ -37,7 +41,7 @@ class Core(morpheusSession: MorpheusSession) {
       allEdgeTables = allEdgeTables ++ edgeElementTables
     }
     val allElements: Seq[MorpheusElementTable] = allNodeTables ++ allEdgeTables
-    val graph = morpheusSession.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
+    val graph = this.morpheusSession.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
     graph
   }
 
@@ -50,4 +54,18 @@ class Core(morpheusSession: MorpheusSession) {
     logger.info((System.currentTimeMillis() - start).toString)
     logger.info(" ms")
   }
+
+  def runCypherAndReturnJsonString(cypherQuery: String, graph: RelationalCypherGraph[SparkTable.DataFrameTable]) : String = {
+    val start = System.currentTimeMillis()
+    graph.cypher(cypherQuery).records.table.df.toJSON.collect.mkString("[", "," , "]" )
+  }
+
+  def createMorpheusSession(sparkConf: SparkConf): MorpheusSession = {
+    val sparkSession: SparkSession = SparkSession.builder
+      .config(sparkConf)
+      .getOrCreate()
+    val morpheusSession: MorpheusSession = MorpheusSession.create(sparkSession)
+    morpheusSession
+  }
+
 }
