@@ -26,9 +26,7 @@ class CypherQueryController @Inject()(val controllerComponents: ControllerCompon
         BadRequest(Json.obj("message" -> JsError.toJson(errors)))
       },
       query => {
-        val core:Core = t2Service.initializeT2Core()
-        val graph = core.makeGraph(version = datasetVersion)
-        val res = core.runCypherAndReturnJsonString(graph=graph,cypherQuery=query.query)
+        val res = t2Service.runCypher(cypher=query.query)
         Ok(res)
       }
     )

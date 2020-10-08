@@ -17,7 +17,9 @@ trait KGXFileReader {
     val content = Downloader.getFileAsString(filePath)
     val strippedJson = content.toString.stripLineEnd
     import session.sparkSession.implicits._
-    session.sparkSession.read.option("inferSchema", "true").json(Seq(strippedJson).toDS()).toDF
+    val fileDF = session.sparkSession.read.option("inferSchema", "true").json(Seq(strippedJson).toDS()).toDF
+    fileDF.cache()
+    fileDF.checkpoint(true)
   }
 
   def createElementTables(filePath: String, session:MorpheusSession): Seq[MorpheusElementTable]

@@ -29,11 +29,14 @@ object KGXNodesFileReader extends KGXFileReader {
         propertyKeys = node_schema.map(property => property.name).toSet[String]
       )
       filteredNodes.cache()
+      filteredNodes.checkpoint(true)
       filteredNodes.sort()
       filteredNodes.count()
       val nodeTable: MorpheusElementTable = MorpheusElementTable.create(nodeMapping, filteredNodes)
       elementTables = elementTables ++ Seq(nodeTable)
     }
+    session.sparkSession.sparkContext.broadcast(elementTables)
+
     elementTables
   }
 }

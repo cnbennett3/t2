@@ -35,13 +35,14 @@ object KGXEdgesFileReader extends KGXFileReader {
         properties = edgesTableSchema.map(property => property.name).toSet[String]
       )
       filtered_edges.cache()
+      filtered_edges.checkpoint(true)
       filtered_edges.sort()
       filtered_edges.count()
       val edgeTable = MorpheusElementTable.create(relationshipMapping, filtered_edges)
 
       elementTables = elementTables ++ Seq(edgeTable)
     }
-
+    session.sparkSession.sparkContext.broadcast(elementTables)
     // Give back element tables
     elementTables
   }

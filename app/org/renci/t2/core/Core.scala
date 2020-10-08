@@ -42,6 +42,7 @@ class Core(sparkConf: SparkConf , kgxFilesAddress: String) {
     }
     val allElements: Seq[MorpheusElementTable] = allNodeTables ++ allEdgeTables
     val graph = this.morpheusSession.readFrom(allElements(0), allElements.slice(1, allElements.length): _*)
+    graph.cache()
     graph
   }
 
