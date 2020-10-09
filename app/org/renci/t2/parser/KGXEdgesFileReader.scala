@@ -41,7 +41,6 @@ object KGXEdgesFileReader extends KGXFileReader {
 
       elementTables = elementTables ++ Seq(edgeTable)
     }
-    session.sparkSession.sparkContext.broadcast(elementTables)
     // Give back element tables
     elementTables
   }
