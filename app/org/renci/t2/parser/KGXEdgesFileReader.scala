@@ -41,7 +41,6 @@ object KGXEdgesFileReader extends KGXFileReader {
 
       elementTables = elementTables ++ Seq(edgeTable)
     }
-
     // Give back element tables
     elementTables
   }

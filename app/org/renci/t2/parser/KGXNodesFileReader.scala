@@ -34,6 +34,7 @@ object KGXNodesFileReader extends KGXFileReader {
       val nodeTable: MorpheusElementTable = MorpheusElementTable.create(nodeMapping, filteredNodes)
       elementTables = elementTables ++ Seq(nodeTable)
     }
+
     elementTables
   }
 }
