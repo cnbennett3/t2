@@ -10,16 +10,8 @@ import play.api.Configuration
 @Singleton
 class T2Service @Inject() (config: Configuration) {
   val core: Core = this.initializeT2Core()
-  val graph: RelationalCypherGraph[SparkTable.DataFrameTable] = this.core.makeGraph(config.get[String]("kgx.version"))
+  val graph: RelationalCypherGraph[SparkTable.DataFrameTable] = this.core.makeGraph(config.get[String]("t2.kgx.version"))
   def initializeT2Core(): Core = {
-    println("LFDLDFLDFLDLFDLFLDFLDF")
-    println(
-      """
-        |odfodfodfodfdlfds
-        |dfsdfdsfds
-        |DFSDfsdf
-        |
-        |""".stripMargin)
     val sparkConf: SparkConf = new SparkConf()
     // Set some configs
     sparkConf.setMaster(
@@ -28,6 +20,10 @@ class T2Service @Inject() (config: Configuration) {
       config.get[String]("t2.spark.appName")
     ).set(
       "spark.executor.memory", config.get[String]("t2.spark.executor.memory")
+//    ).set(
+//      "spark.executor.instances", config.get[String]("t2.spark.executor.instances")
+//    ).set(
+//      "spark.kubernetes.container.image", config.get[String]("t2.spark.kubernetes.container.image")
     )
     // Voila we are set make core
     val kgxFileServer = config.get[String]("t2.kgx.serverRoot")
@@ -37,5 +33,7 @@ class T2Service @Inject() (config: Configuration) {
   def runCypher(cypher: String): String = {
     this.core.runCypherAndReturnJsonString(cypher, this.graph)
   }
+
+
 
 }

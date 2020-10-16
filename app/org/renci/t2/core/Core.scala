@@ -7,7 +7,7 @@ import org.opencypher.morpheus.api.io.MorpheusElementTable
 import org.opencypher.morpheus.impl.table.SparkTable
 import org.opencypher.okapi.relational.api.graph.RelationalCypherGraph
 import org.renci.t2.parser.{KGXEdgesFileReader, KGXNodesFileReader}
-import org.renci.t2.util.{KGXMetaData, Version, logger}
+import org.renci.t2.util.{KGXMetaData, Version, logger, Neo4jJsonCaster}
 
 
 
@@ -58,7 +58,14 @@ class Core(sparkConf: SparkConf , kgxFilesAddress: String) {
 
   def runCypherAndReturnJsonString(cypherQuery: String, graph: RelationalCypherGraph[SparkTable.DataFrameTable]) : String = {
     val start = System.currentTimeMillis()
-    graph.cypher(cypherQuery).records.table.df.toJSON.collect.mkString("[", "," , "]" )
+    val records = graph.cypher(cypherQuery).records
+    val response = Neo4jJsonCaster.convertRecordsToJson(records)
+    logger.info("Running query: ")
+    logger.info(cypherQuery)
+    logger.info("took ")
+    logger.info((System.currentTimeMillis() - start).toString)
+    logger.info(" ms")
+    response
   }
 
   def createMorpheusSession(sparkConf: SparkConf): MorpheusSession = {
