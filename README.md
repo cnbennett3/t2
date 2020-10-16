@@ -12,27 +12,29 @@ Untar in ~/app and rename to spark and hadoop
 
 ## Building
 ```
-<repo-root>$ bin/t2 buildjar
+$ bin/t2 build jar
 ```
 
 ## Running 
 
-In a shell:
-```
-<repo-root>$ bin/t2 spark master start
-```
-In another shell
-```
-<repo-root>$ bin/t2 spark worker start
-```
-In another shell
-```
-<repo-root>$ t2 spark shell
+
+#### Settings
+
+```bash
+export ALLOWED_HOST_NAME=localhost
+export APP_SECRET=changeme
+export KGX_VERSION=v0.1
+export EXECUTOR_CORES=2
+export EXECUTOR_MEM=4g
+export DRIVER_MEM=2g
+export SPARK_SCRATCH_DIR=/tmp
 ```
 
-To start loading a graph, an example script could be used. 
+#### Starting services
 
 ```
-:load bin/examples/makeGraph.sc
+bin/t2 spark master start
+bin/t2 spark worker start
+bin/t2 runWebServerLocal
 ```
 

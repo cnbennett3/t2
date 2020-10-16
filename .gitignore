@@ -4,6 +4,7 @@
 .settings
 .idea
 .cache-tests
+RUNNING_PID
 catalog-v001.xml
 project/project
 project/target
