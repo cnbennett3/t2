@@ -113,6 +113,7 @@ runWebServerLocal () {
   -Dt2.spark.executor.cores=$EXECUTOR_CORES\
   -Dt2.spark.executor.memory=$EXECUTOR_MEM\
   -Dt2.spark.driver.memory=$DRIVER_MEM\
+  -Dt2.spark.driver.cores=$DRIVER_CORES\
   -Dt2.kgx.version=$KGX_VERSION\
   -Dt2.spark.local.dir=$SPARK_SCRATCH_DIR\
   play.core.server.ProdServerStart
