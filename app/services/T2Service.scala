@@ -20,10 +20,10 @@ class T2Service @Inject() (config: Configuration) {
       config.get[String]("t2.spark.appName")
     ).set(
       "spark.executor.memory", config.get[String]("t2.spark.executor.memory")
-//    ).set(
-//      "spark.executor.instances", config.get[String]("t2.spark.executor.instances")
-//    ).set(
-//      "spark.kubernetes.container.image", config.get[String]("t2.spark.kubernetes.container.image")
+    ).set(
+      "spark.executor.instances", config.get[String]("t2.spark.executor.instances")
+    ).set(
+      "spark.kubernetes.container.image", config.get[String]("t2.spark.kubernetes.container.image")
     ).set(
       "spark.driver.memory", config.get[String]("t2.spark.driver.memory")
     ).set(
