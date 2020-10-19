@@ -22,9 +22,9 @@ $ bin/t2 build jar
 
 ```bash
 export ALLOWED_HOST_NAME=localhost
-export APP_SECRET=changeme
+export APP_SECRET=superSecretkey
 export KGX_VERSION=v0.1
-export EXECUTOR_CORES=2
+export EXECUTOR_CORES=1
 export EXECUTOR_MEM=4g
 export DRIVER_MEM=2g
 export SPARK_SCRATCH_DIR=/tmp

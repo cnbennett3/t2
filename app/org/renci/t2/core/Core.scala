@@ -76,4 +76,15 @@ class Core(sparkConf: SparkConf , kgxFilesAddress: String) {
     morpheusSession
   }
 
+  def runAndReturnJSONOld(cypherQuery: String, graph: RelationalCypherGraph[SparkTable.DataFrameTable]): String = {
+    val start = System.currentTimeMillis()
+    val response = graph.cypher(cypherQuery).records.table.df.toJSON.collect.mkString("[", "," , "]" )
+    logger.info("Running query: ")
+    logger.info(cypherQuery)
+    logger.info("took ")
+    logger.info((System.currentTimeMillis() - start).toString)
+    logger.info(" ms")
+    response
+  }
+
 }

@@ -1,3 +1,4 @@
 GET     /                           controllers.IndexController.index
 GET     /count                      controllers.IndexController.runCount
-POST     /runQuery                  controllers.CypherQueryController.runQuery(version: Option[String])
+POST     /runQuery                  controllers.CypherQueryController.runQuery
+POST    /runQueryOld                controllers.CypherQueryController.runQueryOld

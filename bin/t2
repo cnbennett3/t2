@@ -104,13 +104,12 @@ build () {
 
 runWebServerLocal () {
 
-  build jar
   # if running PID exist from previous play server run remove it
   rm ./RUNNING_PID  > /dev/null
   java -cp ./target/scala-2.12/*:$SPARK_HOME/jars/*:$SPARK_DIST_CLASSPATH\
   -Dplay.filters.hosts.allowed.0=$ALLOWED_HOST_NAME \
   -Dplay.http.secret.key=$APP_SECRET \
-  -Dhttp.akka.idle.Timeout=infinite \
+  -Dplay.server.http.idleTimeout=infinite \
   -Dt2.spark.executor.cores=$EXECUTOR_CORES\
   -Dt2.spark.executor.memory=$EXECUTOR_MEM\
   -Dt2.spark.driver.memory=$DRIVER_MEM\

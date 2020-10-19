@@ -39,7 +39,7 @@ object Neo4jJsonCaster {
    * @param arr Array of sets of primitive types.
    * @return JSON string
    */
-  private def convertArrayOfObjectToJson(arr: Array[Set[Any]]): String = {
+  private def convertArrayOfObjectToJson(arr: Iterable[Set[Any]]): String = {
     var outer = Seq[String]()
     for ( row <- arr) {
       var inner = Seq[String]()
@@ -73,9 +73,10 @@ object Neo4jJsonCaster {
   def convertRecordsToJson(records: RelationalCypherRecords[SparkTable.DataFrameTable]): String = {
     val cols = records.header.vars.map(_.name)
     val mappedRecords = records.rows.toArray.map(row => cols.map(col => row(col)))
+
     val mappedAsPrimitives = mappedRecords.map(x => x.map(_.unwrap).map{
-      case node: MorpheusNode => node.properties.unwrap.toMap
-      case edge: MorpheusRelationship => edge.properties.unwrap.toMap
+      case node: MorpheusNode => node.properties.unwrap
+      case edge: MorpheusRelationship => edge.properties.unwrap
       case other => other })
     val dataJson = "\"data\": " + convertArrayOfObjectToJson(mappedAsPrimitives)
     val colsJson:String = "\"columns\": " + parseList(cols.toList)

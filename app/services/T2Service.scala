@@ -44,6 +44,10 @@ class T2Service @Inject() (config: Configuration) {
     this.core.runCypherAndReturnJsonString(cypher, this.graph)
   }
 
+  def runCypherOld(cypher: String): String = {
+    this.core.runAndReturnJSONOld(cypher, this.graph)
+  }
+
 
 
 }

@@ -18,9 +18,8 @@ class CypherQueryController @Inject()(val controllerComponents: ControllerCompon
 
   implicit  val queryReads: Reads[CypherQuery] = ((JsPath \ "query").read[String])map(CypherQuery(_))
 
-  def runQuery(version: Option[String]) = Action(parse.json) { request =>
+  def runQuery() = Action(parse.json) { request =>
     val queryBody = request.body.validate[CypherQuery]
-    val datasetVersion = version.get
     queryBody.fold(
       errors => {
         BadRequest(Json.obj("message" -> JsError.toJson(errors)))
@@ -30,7 +29,19 @@ class CypherQueryController @Inject()(val controllerComponents: ControllerCompon
         Ok(res)
       }
     )
+  }
 
+  def runQueryOld() = Action (parse.json) { request =>
+    val queryBody = request.body.validate[CypherQuery]
+    queryBody.fold(
+      errors => {
+        BadRequest(Json.obj("message" -> JsError.toJson(errors)))
+      },
+      query => {
+        val res = t2Service.runCypherOld(cypher=query.query)
+        Ok(res)
+      }
+    )
   }
 
 
