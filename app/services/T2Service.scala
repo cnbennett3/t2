@@ -38,6 +38,8 @@ class T2Service @Inject() (config: Configuration) {
       "spark.submit.deployMode", config.get[String]("t2.spark.submit.deployMode")
     ).set(
       "spark.driver.host", config.get[String]("t2.spark.driver.host")
+    ).set(
+      "spark.kubernetes.namespace", config.get[String]("t2.spark.kubernetes.namespace")
     )
     // Voila we are set make core
     val kgxFileServer = config.get[String]("t2.kgx.serverRoot")
