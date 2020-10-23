@@ -25,22 +25,37 @@ RUN apt-get -y update
 RUN apt-get install -y gnupg
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
-RUN apt-get -y update && apt-get install --no-install-recommends -y wget git sbt
+RUN apt-get -y update && apt-get install --no-install-recommends -y git sbt
 RUN sbt version
 
+
+# Install tini 
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/bin/tini
+
+RUN set -ex && \
+# Install OS level libraries and tools.
+	apt-get update && \
+	ln -s /lib /lib64 && \
+	apt-get install -y bash libc6 libpam-modules libnss3 wget python3 python3-pip && \
+	chmod +x /usr/bin/tini && \
+	rm /bin/sh && \
+	ln -sv /bin/bash /bin/sh && \
+	ln -sv /usr/bin/tini /sbin/tini && \
+	echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
+	chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
+	ln -sv /usr/bin/python3 /usr/bin/python && \
+	ln -sv /usr/bin/pip3 /usr/bin/pip && \
+	rm -rf /var/cache/apt/*
+	
 # Spark dependencies
 WORKDIR /opt
 ENV SPARK_VERSION=2.4.4 \
 	HADOOP_VERSION=2.6.5 \
 	INSTALL_DIR=/usr/local
 
-RUN set -ex && \
-# Install OS level libraries and tools.
-	apt-get update && \
-	ln -s /lib /lib64 && \
-	apt-get install -y bash libc6 libpam-modules libnss3 wget && \
-# Get spark
-    wget --no-verbose https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-without-hadoop-scala-2.12.tgz && \
+# setup spark and hadoop
+RUN wget --no-verbose https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-without-hadoop-scala-2.12.tgz && \
     tar xzf spark-${SPARK_VERSION}-bin-without-hadoop-scala-2.12.tgz && \
     rm spark-${SPARK_VERSION}-bin-without-hadoop-scala-2.12.tgz && \
     wget --no-verbose https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz && \
@@ -88,7 +103,7 @@ WORKDIR /home/$USER
 #WORKDIR $HOME/t2
 #RUN sbt
 #RUN bin/t2 build jar
-ENV T2_JAR=t2-sbt-assembly-0.1.jar
+ENV T2_JAR=t2-test-k8s.jar
 RUN wget --no-verbose https://stars.renci.org/var/kgx_data/${T2_JAR}
 RUN mv ${T2_JAR} ${INSTALL_DIR}/spark/jars
 
