@@ -31,7 +31,7 @@ export DRIVER_MEM=2g
 export SPARK_SCRATCH_DIR=/tmp
 export SPARK_DEPLOY_MODE=client
 export SPARK_DRIVER_HOST=locahost
-export SPARK_KUBERNETES_NAMEPACE=default
+export SPARK_KUBERNETES_NAMESPACE=default
 export SPARK_KUBERNETES_CONTAINER_IMAGE=renciorg/t2:spark-2.4.4-2.12-k8s-app
 ```
 
