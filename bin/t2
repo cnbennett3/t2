@@ -121,7 +121,7 @@ runWebServerLocal () {
   -Dt2.spark.submit.deployMode=$SPARK_DEPLOY_MODE\
   -Dt2.spark.driver.host=$SPARK_DRIVER_HOST\
   -Dt2.spark.kubernetes.namespace=$SPARK_KUBERNETES_NAMESPACE\
-  -Dt2.spark.master=$SPARK_MASTER
+  -Dt2.spark.master=$SPARK_MASTER\
   play.core.server.ProdServerStart
 
 }
