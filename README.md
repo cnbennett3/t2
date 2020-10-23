@@ -29,6 +29,8 @@ export DRIVER_CORES=1
 export EXECUTOR_MEM=4g
 export DRIVER_MEM=2g
 export SPARK_SCRATCH_DIR=/tmp
+export SPARK_DEPLOY_MODE=client
+export SPARK_DRIVER_HOST=locahost
 ```
 
 #### Starting services

@@ -34,6 +34,10 @@ class T2Service @Inject() (config: Configuration) {
       "spark.executor.cores", config.get[String]("t2.spark.executor.cores")
     ).set(
       "spark.local.dir", config.get[String]("t2.spark.local.dir")
+    ).set(
+      "spark.submit.deployMode", config.get[String]("t2.spark.submit.deployMode")
+    ).set(
+      "spark.driver.host", config.get[String]("t2.spark.driver.host")
     )
     // Voila we are set make core
     val kgxFileServer = config.get[String]("t2.kgx.serverRoot")

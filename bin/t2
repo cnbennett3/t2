@@ -114,8 +114,12 @@ runWebServerLocal () {
   -Dt2.spark.executor.memory=$EXECUTOR_MEM\
   -Dt2.spark.driver.memory=$DRIVER_MEM\
   -Dt2.spark.driver.cores=$DRIVER_CORES\
-  -Dt2.kgx.version=$KGX_VERSION\
+  -Dt2.spark.kubernetes.container.image=renciorg/t2:spark-2.4.4-2.12-k8s-app\
+  -Dt2.kgx.version=test\
+  -Dt2.spark.driver.host=$DRIVER_HOST\
   -Dt2.spark.local.dir=$SPARK_SCRATCH_DIR\
+  -Dt2.spark.submit.deployMode=$SPARK_DEPLOY_MODE\
+  -Dt2.spark.driver.host=$SPARK_DRIVER_HOST\
   play.core.server.ProdServerStart
 
 }
