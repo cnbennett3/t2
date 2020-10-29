@@ -4,8 +4,9 @@ name := "t2-sbt"
 
 version := "0.1"
 
-scalaVersion := "2.12.12"
+scalaVersion := "2.12.8"
 sparkVersion := "2.4.4"
+autoScalaLibrary := false
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 mainClass in assembly := Some("play.core.server.ProdServerStart")
