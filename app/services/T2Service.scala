@@ -40,6 +40,8 @@ class T2Service @Inject() (config: Configuration) {
       "spark.driver.host", config.get[String]("t2.spark.driver.host")
     ).set(
       "spark.kubernetes.namespace", config.get[String]("t2.spark.kubernetes.namespace")
+    ).set(
+      "spark.driver.maxResultSize", config.get[String]("t2.spark.driver.maxResultSize")
     )
     // Voila we are set make core
     val kgxFileServer = config.get[String]("t2.kgx.serverRoot")

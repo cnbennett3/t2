@@ -2,8 +2,8 @@
 # Copyright (c) Renaissance Computing Institute.
 # Distributed under the terms of the MIT License.
 #
-ARG BASE_CONTAINER=openjdk:8-jdk-slim
-FROM $BASE_CONTAINER
+FROM openjdk:8-jdk-slim
+
 
 LABEL maintainer="RENCI <info@renci.org>"
 
@@ -45,8 +45,8 @@ RUN set -ex && \
 	echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
 	chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
 	ln -sv /usr/bin/python3 /usr/bin/python && \
-	ln -sv /usr/bin/pip3 /usr/bin/pip && \
-	rm -rf /var/cache/apt/*
+	ln -sv /usr/bin/pip3 /usr/bin/pip # && \
+#	rm -rf /var/cache/apt/*
 	
 # Spark dependencies
 WORKDIR /opt
@@ -103,7 +103,7 @@ WORKDIR /home/$USER
 #WORKDIR $HOME/t2
 #RUN sbt
 #RUN bin/t2 build jar
-ENV T2_JAR=t2-test-k8s.jar
+ENV T2_JAR=t2-scala-2.12.8.jar
 RUN wget --no-verbose https://stars.renci.org/var/kgx_data/${T2_JAR}
 RUN mv ${T2_JAR} ${INSTALL_DIR}/spark/jars
 
