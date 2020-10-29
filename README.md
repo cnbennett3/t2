@@ -33,7 +33,8 @@ export SPARK_DEPLOY_MODE=client
 export SPARK_DRIVER_HOST=locahost
 export SPARK_KUBERNETES_NAMESPACE=default
 export SPARK_MASTER=spark://localhost:7077
-export SPARK_KUBERNETES_CONTAINER_IMAGE=renciorg/t2:spark-2.4.4-2.12-k8s-app
+export SPARK_KUBERNETES_CONTAINER_IMAGE=renciorg/t2:spark-2.4.4-2.12.8
+export SPARK_DRIVER_MAXRESULTSIZE=2G
 ```
 
 #### Starting services
