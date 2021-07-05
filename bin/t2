@@ -57,10 +57,23 @@ spark () {
     shell () {
         $SPARK_HOME/bin/spark-shell \
             --master=spark://0.0.0.0:7077 \
-            --conf spark.neo4j.bolt.username=neo4j \
-            --conf spark.neo4j.bolt.password=ncatsgamma \
-            --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6
+            --executor-memory 4g \
+            --driver-memory 3g \
+            --conf spark.sql.legacy.allowUntypedScalaUDF=True \
+            --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6 \
+#            --jars=./target/scala-2.12/t2-sbt-assembly-0.1.jar
+
     }
+
+    submit () {
+      $SPARK_HOME/bin/spark-submit \
+      --class org.renci.t2.app.App \
+      --packages=org.opencypher:morpheus-spark-cypher:$CYPHER_VERSION,org.apache.spark:spark-hive_2.12:2.4.4,neo4j-contrib:neo4j-spark-connector:2.4.0-M6 \
+      ./target/scala-2.12/t2-sbt-assembly-0.1.jar
+    }
+
+
+
     $*
 }
 
@@ -81,4 +94,35 @@ robokop () {
     $*
 }
 
+build () {
+  jar () {
+    sbt clean
+    sbt assembly
+  }
+  $*
+}
+
+runWebServerLocal () {
+
+  # if running PID exist from previous play server run remove it
+  rm ./RUNNING_PID  > /dev/null
+  java -cp ./target/scala-2.12/*:$SPARK_HOME/jars/*:$SPARK_DIST_CLASSPATH\
+  -Dplay.filters.hosts.allowed.0=$ALLOWED_HOST_NAME \
+  -Dplay.http.secret.key=$APP_SECRET \
+  -Dplay.server.http.idleTimeout=infinite \
+  -Dt2.spark.executor.cores=$EXECUTOR_CORES\
+  -Dt2.spark.executor.memory=$EXECUTOR_MEM\
+  -Dt2.spark.driver.memory=$DRIVER_MEM\
+  -Dt2.spark.driver.cores=$DRIVER_CORES\
+  -Dt2.spark.kubernetes.container.image=$SPARK_KUBERNETES_CONTAINER_IMAGE\
+  -Dt2.kgx.version=test\
+  -Dt2.spark.driver.host=$DRIVER_HOST\
+  -Dt2.spark.local.dir=$SPARK_SCRATCH_DIR\
+  -Dt2.spark.submit.deployMode=$SPARK_DEPLOY_MODE\
+  -Dt2.spark.driver.host=$SPARK_DRIVER_HOST\
+  -Dt2.spark.kubernetes.namespace=$SPARK_KUBERNETES_NAMESPACE\
+  -Dt2.spark.master=$SPARK_MASTER\
+  play.core.server.ProdServerStart
+
+}
 $*

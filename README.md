@@ -2,7 +2,7 @@
 
 ## Install
 
-On osx, running JDK 1.8.0
+On (linux/OSX) JDK 1.8.0
 
 Untar in ~/app and rename to spark and hadoop
 
@@ -10,32 +10,38 @@ Untar in ~/app and rename to spark and hadoop
 
 [hadoop](https://archive.apache.org/dist/hadoop/common/hadoop-2.6.5/hadoop-2.6.5.tar.gz)
 
-Create a python3.7+ virtual environment
+## Building
+```
+$ bin/t2 build jar
+```
 
-Clone [kgx](https://github.com/NCATS-Tangerine/kgx) inside this repo, overwriting exixting kgx directory.
+## Running 
 
-Then restore kgx/kgx/transformer.py with `git checkout kgx/kgx/transformer.py`
 
-## Running
+#### Settings
 
-Import some robokop data via kgx
+```bash
+export ALLOWED_HOST_NAME=localhost
+export APP_SECRET=superSecretkey
+export KGX_VERSION=v0.1
+export EXECUTOR_CORES=1
+export DRIVER_CORES=1
+export EXECUTOR_MEM=4g
+export DRIVER_MEM=2g
+export SPARK_SCRATCH_DIR=/tmp
+export SPARK_DEPLOY_MODE=client
+export SPARK_DRIVER_HOST=locahost
+export SPARK_KUBERNETES_NAMESPACE=default
+export SPARK_MASTER=spark://localhost:7077
+export SPARK_KUBERNETES_CONTAINER_IMAGE=renciorg/t2:spark-2.4.4-2.12.8
+export SPARK_DRIVER_MAXRESULTSIZE=2G
 ```
-t2 robokop import
+
+#### Starting services
+
 ```
-In a shell:
-```
-t2 spark master start
-```
-In another shell
-```
-t2 spark worker start
-```
-In another shell
-```
-t2 spark shell
-```
-Then, at the scala prompt:
-```
-:load load.scala
+bin/t2 spark master start
+bin/t2 spark worker start
+bin/t2 runWebServerLocal
 ```
 
